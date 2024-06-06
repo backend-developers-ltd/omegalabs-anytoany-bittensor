@@ -49,10 +49,14 @@ checkpoints/sd2-1/%:
 CKPT_OUTPUT ?= output_checkpoints/experiment_1
 OPTIONS ?=
 finetune-x1:
+	mkdir -p $(CKPT_OUTPUT)
+	cp config/8B_lora.yaml $(CKPT_OUTPUT)
 	tune run tune_recipes/lora_finetune_single_device.py --config config/8B_lora.yaml \
 		checkpointer.output_dir=$(CKPT_OUTPUT) $(OPTIONS)
 
 finetune-x%:
+	mkdir -p $(CKPT_OUTPUT)
+	cp config/8B_lora.yaml $(CKPT_OUTPUT)
 	tune run --nnodes 1 --nproc_per_node $* \
 		tune_recipes/lora_finetune_distributed.py --config config/8B_lora.yaml \
 		checkpointer.output_dir=$(CKPT_OUTPUT) $(OPTIONS) \
@@ -105,8 +109,9 @@ bagel: ds/bagel/bagel-input-output-v1.0.parquet
 ds/bagel/bagel-%-v1.0.parquet:
 	wget https://huggingface.co/datasets/jondurbin/bagel-llama-3-v1.0/resolve/main/bagel-$*-v1.0.parquet?download=true -O $@
 
-download-base-model:
-	tune download meta-llama/Meta-Llama-3-8B --output-dir checkpoints/Meta-Llama-3-8B
+download-base-model: checkpoints/Meta-Llama-3-8B checkpoints/Meta-Llama-3-8B-Instruct
+checkpoints/Meta-Llama-%:
+	tune download meta-llama/Meta-Llama-$* --output-dir $@
 
 download-datasets: download-sam_llava-dataset download-coco_llava_instruct-dataset download-vision_flan-dataset
 

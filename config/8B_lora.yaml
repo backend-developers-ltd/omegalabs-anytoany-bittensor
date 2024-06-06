@@ -30,20 +30,20 @@ model:
 # Tokenizer
 tokenizer:
   _component_: models.a2a_tokenizer
-  path: checkpoints/Meta-Llama-3-8B-Instruct/tokenizer.model
+  path: checkpoints/Meta-Llama-3-8B-Instruct/original/tokenizer.model
 
 checkpointer:
   _component_: torchtune.utils.FullModelMetaCheckpointer
-  checkpoint_dir: checkpoints/Meta-Llama-3-8B-Instruct/
+  checkpoint_dir: checkpoints/Meta-Llama-3-8B-Instruct/original/
   checkpoint_files: [
     consolidated.00.pth
   ]
   adapter_checkpoint: null
   recipe_checkpoint: null
-  output_dir: output/Meta-Llama-3-8B-Instruct/
+  output_dir: output/Meta-Llama-3-8B/
   model_type: LLAMA3
 resume_from_checkpoint: False
-interim_checkpoint_steps: 5000
+interim_checkpoint_steps: 5
 
 interim_gen_steps: null
 max_new_tokens: 100

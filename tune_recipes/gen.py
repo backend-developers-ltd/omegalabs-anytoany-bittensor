@@ -44,6 +44,7 @@ class InferenceRecipe:
     """
 
     def __init__(self, cfg: DictConfig) -> None:
+        self._cfg = cfg
         self._device = utils.get_device(device=cfg.device)
         self._dtype = utils.get_dtype(dtype=cfg.dtype)
         self._quantizer = config.instantiate(cfg.inference.quantizer)
@@ -94,8 +95,9 @@ class InferenceRecipe:
         log.info(f"Model is initialized with precision {self._dtype}.")
 
         # Ensure the cache is setup on the right device
-        with self._device:
-            model.setup_caches(max_batch_size=1, dtype=self._dtype)
+        if not hasattr(self._cfg, 'setup_caches') or self._cfg.setup_caches:
+            with self._device:
+                model.setup_caches(max_batch_size=1, dtype=self._dtype)
 
         return model
 
@@ -120,7 +122,6 @@ class InferenceRecipe:
 
         return model
 
-
     def mm_process_prompt(self, prompt):
         return (
             prompt
@@ -144,15 +145,12 @@ class InferenceRecipe:
 
     def extract_mm_context(self, video_ib_embed, tokens):
         context = {}
-        in_mm_embed = False
         for idx, tok in enumerate(tokens):
-            in_mm_embed = in_mm_embed and not tok in self._mm_ids_end
-            if in_mm_embed:
-                #tokens[idx] # to support multiple embeds: get the value, match it up with the sample embed
-                context[idx] = {
+            is_embed_start = tok in self._mm_ids_start
+            if is_embed_start:
+                context[idx+1] = {
                     "ib_embed": torch.tensor(video_ib_embed, dtype=self._dtype, device=self._device),
                 }
-            in_mm_embed = in_mm_embed or tok in self._mm_ids_start
         return context
 
     @torch.no_grad()
@@ -178,7 +176,6 @@ class InferenceRecipe:
         bos_id = self._tokenizer.tt_model.encode("<|begin_of_text|>", allowed_special="all")[0]
         allowed_id = self._tokenizer.tt_model.encode(f"<|eot_id|>{START_IMAGE}{END_IMAGE}{START_AUDIO}{END_AUDIO}{START_VIDEO}{END_VIDEO}", allowed_special="all")
         disallowed_tokens = list(set(range(bos_id, bos_id + 256)) - set(allowed_id))
-        # self._model.output.weight.data[disallowed_tokens, :] = 0
 
         def custom_generate_next_token(model, input_pos, x, temperature=1.0, top_k=None):
             model.tok_embeddings.set_context([])
@@ -232,7 +229,7 @@ class InferenceRecipe:
         cleaned_tokens = [t for t in generated_tokens[len(prompt):] if t not in disallowed_tokens + allowed_id]
         caption = self._tokenizer.decode(cleaned_tokens)
 
-        log.debug(f"Generated caption: {caption} in {t:.02f} sec")
+        # log.debug(f"Generated caption: {caption} in {t:.02f} sec")
 
         return caption
 

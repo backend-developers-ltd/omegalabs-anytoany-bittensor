@@ -130,6 +130,7 @@ class LoRAFinetuneRecipeSingleDevice(FTRecipeInterface):
 
         self._resume_from_checkpoint = cfg.resume_from_checkpoint
         self._gradient_accumulation_steps = cfg.gradient_accumulation_steps
+        self._interim_checkpoint_steps = cfg.interim_checkpoint_steps
 
     def load_checkpoint(self, cfg_checkpointer: DictConfig) -> Dict[str, Any]:
         """
@@ -371,7 +372,7 @@ class LoRAFinetuneRecipeSingleDevice(FTRecipeInterface):
 
         return sampler, dataloader
 
-    def save_checkpoint(self, epoch: int) -> None:
+    def save_checkpoint(self, epoch: int, label: str = None) -> None:
         """
         Checkpoint the state of the recipe. The constructed checkpoint state dict
         contains the following information:
@@ -383,6 +384,7 @@ class LoRAFinetuneRecipeSingleDevice(FTRecipeInterface):
         different checkpoint files. To correctly resume from training, the adapter weights
         and recipe state must be provided along with the base model weights.
         """
+        label = label or epoch
         ckpt_dict = {}
         # if training is in-progress, checkpoint the optimizer state as well
         if epoch + 1 < self.total_epochs:
@@ -415,7 +417,7 @@ class LoRAFinetuneRecipeSingleDevice(FTRecipeInterface):
         ckpt_dict.update({utils.ADAPTER_KEY: adapter_state_dict})
         self._checkpointer.save_checkpoint(
             ckpt_dict,
-            epoch=epoch,
+            epoch=label,
             intermediate_checkpoint=(epoch + 1 < self.total_epochs),
         )
 
@@ -512,6 +514,9 @@ class LoRAFinetuneRecipeSingleDevice(FTRecipeInterface):
                         self._metric_logger.log_dict(
                             memory_stats, step=self.total_training_steps
                         )
+
+                    if (idx + 1) % self._interim_checkpoint_steps == 0:
+                        self.save_checkpoint(epoch=curr_epoch, label='latest')
 
             self.epochs_run += 1
             self.save_checkpoint(epoch=curr_epoch)
