@@ -42,7 +42,7 @@ validator: a2a
 		bash auto_updating_validator.sh --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace $(FLAGS)
 	
 manual-validator: a2a
-	docker run -it --restart always --rm \
+	docker run -it --detach --restart always --rm \
 		--ipc=host --ulimit memlock=-1 --ulimit stack=67108864 --gpus=all \
 		--cap-add SYS_PTRACE --cap-add=SYS_ADMIN --ulimit core=0 \
 		-v $(shell pwd):/app \
