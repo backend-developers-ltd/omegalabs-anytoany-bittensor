@@ -870,7 +870,7 @@ class Validator:
         uids = []
         # Query API for next model to score.
         bt.logging.info(f"Getting model to score...")
-        uid = 252  # await self.get_model_to_score(competition_parameters.competition_id)
+        uid = 252 if competition_parameters.competition_id == 'o1' else 248  # await self.get_model_to_score(competition_parameters.competition_id)
 
         if uid is not None:
             uids = [uid]
