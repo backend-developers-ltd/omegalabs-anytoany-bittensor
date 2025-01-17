@@ -27,6 +27,7 @@ WANDBOFF :=
 ifeq ($(WANDB), off)
 	WANDBOFF := --wandb.off
 endif
+FLAGS ?=
 
 validator: a2a
 	docker run -it --detach --restart always \
@@ -38,7 +39,7 @@ validator: a2a
 		--env-file vali.env \
 		--name omega-a2a-validator \
 		a2a \
-		bash auto_updating_validator.sh --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace
+		bash auto_updating_validator.sh --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace $(FLAGS)
 	
 manual-validator: a2a
 	docker run -it --detach --restart always \
@@ -50,7 +51,7 @@ manual-validator: a2a
 		--env-file .env \
 		--name omega-a2a-validator \
 		a2a \
-		python neurons/validator.py --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace
+		python neurons/validator.py --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace $(FLAGS)
 
 check-vali-logs:
 	docker logs omega-a2a-validator --follow --tail 100
