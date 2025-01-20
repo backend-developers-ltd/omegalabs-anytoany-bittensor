@@ -55,3 +55,19 @@ alpha = 0.9
 temperature = 0.08
 # validator score boosting for earlier models.
 timestamp_epsilon = 0.01
+
+# ---------------------------------
+# Constants for running with a trusted miner.
+# ---------------------------------
+
+VIDEOBIND_HF_REPO_ID = 'jondurbin/videobind-v0.2'
+VIDEOBIND_FILENAME = 'videobind.pth'
+
+VOLUME_DIR = Path('/volume')
+OUTPUT_DIR = Path('/output')
+
+MODELS_RELATIVE_PATH = '.'
+CHECKPOINTS_RELATIVE_PATH = 'checkpoints'
+
+OUTPUT_FILENAME = 'output.json'
+DATASET_FILENAME = 'dataset.json'

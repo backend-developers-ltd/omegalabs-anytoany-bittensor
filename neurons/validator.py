@@ -17,6 +17,10 @@
 # DEALINGS IN THE SOFTWARE.
 
 import os
+
+from neurons.computation_providers import ComputeHordeComputationProvider, TrustedMiner, LocalComputationProvider, \
+    DatasetNotAvailable
+
 os.environ["USE_TORCH"] = "1"
 os.environ["BT_LOGGING_INFO"] = "1"
 
@@ -444,6 +448,16 @@ class Validator:
         else:
             bt.logging.warning("Auto update disabled.")
 
+        use_compute_horde = False
+        if use_compute_horde:
+            self.computation_provider = ComputeHordeComputationProvider(wallet=self.wallet, trusted_miner=TrustedMiner(
+                address='',
+                port=0,
+                hotkey='dummy',
+            ))
+        else:
+            self.computation_provider = LocalComputationProvider()
+
     def __del__(self):
         if hasattr(self, "stop_event"):
             self.stop_event.set()
@@ -870,7 +884,11 @@ class Validator:
         uids = []
         # Query API for next model to score.
         bt.logging.info(f"Getting model to score...")
-        uid = 252 if competition_parameters.competition_id == 'o1' else 248  # await self.get_model_to_score(competition_parameters.competition_id)
+        if self.config.offline:
+            # If offline, pick miner UID randomly.
+            uid = self.miner_iterator.peek()
+        else:
+            uid = await self.get_model_to_score(competition_parameters.competition_id)
 
         if uid is not None:
             uids = [uid]
@@ -969,40 +987,20 @@ class Validator:
                     try:
                         # Update the block this uid last updated their model.
                         uid_to_block[uid_i] = model_i_metadata.block
-                        hf_repo_id = model_i_metadata.id.namespace + "/" + model_i_metadata.id.name
                         start_time = time.time()
-                        if competition_parameters.competition_id == "o1":
-                            eval_data = pull_latest_omega_dataset()
-                            if eval_data is None:
-                                bt.logging.warning(
-                                    f"No data is currently available to evalute miner models on, sleeping for {MINS_TO_SLEEP} minutes."
-                                )
-                                time.sleep(MINS_TO_SLEEP * 60)
-                            score = get_model_score(
-                                hf_repo_id,
-                                mini_batch=eval_data,
-                                local_dir=self.temp_dir_cache.get_temp_dir(hf_repo_id),
-                                hotkey=hotkey,
-                                block=model_i_metadata.block,
-                                model_tracker=self.model_tracker
-                            )
-                        elif competition_parameters.competition_id == "v1":
-                            eval_data_v2v = pull_latest_diarization_dataset()
-                            if eval_data_v2v is None:
-                                bt.logging.warning(
-                                    f"No data is currently available to evalute miner models on, sleeping for {MINS_TO_SLEEP} minutes."
-                                )
-                                time.sleep(MINS_TO_SLEEP * 60)
-                            score = compute_s2s_metrics(
-                                model_id="moshi", # update this to the model id as we support more models.
-                                hf_repo_id=hf_repo_id,
-                                mini_batch=eval_data_v2v,
-                                local_dir=self.temp_dir_cache.get_temp_dir(hf_repo_id),
-                                hotkey=hotkey,
-                                block=model_i_metadata.block,
-                                model_tracker=self.model_tracker
-                            )
+
+                        score = self.computation_provider.score_model(
+                            competition_id=competition_parameters.competition_id,
+                            hotkey=hotkey,
+                            model_metadata=model_i_metadata,
+                        )
+
                         bt.logging.info(f"Score for {model_i_metadata} is {score}, took {time.time() - start_time} seconds")
+                    except DatasetNotAvailable:
+                        bt.logging.warning(
+                            f"No data is currently available to evaluate miner models on, sleeping for {MINS_TO_SLEEP} minutes."
+                        )
+                        time.sleep(MINS_TO_SLEEP * 60)
                     except Exception as e:
                         bt.logging.error(
                             f"Error in eval loop: {e}. Setting score for uid: {uid_i} to 0. \n {traceback.format_exc()}"
