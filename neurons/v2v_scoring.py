@@ -215,9 +215,9 @@ def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_bat
 
 
 if __name__ == "__main__":
-    
-  
     from utilities.temp_dir_cache import TempDirCache
+
+    bt.logging.set_info()
     temp_dir_cache = TempDirCache(10)
     for epoch in range(2):
         for hf_repo_id in ["tezuesh/moshi1", "tezuesh/moshi7"]:
@@ -233,7 +233,6 @@ if __name__ == "__main__":
             model_tracker = None
             vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker)
             end_time = time.time()
-            print(vals, end_time)
             bt.logging.info(f"I am here {hf_repo_id} Time taken: {end_time - start_time:.2f} seconds")
             bt.logging.info(f"Combined score: {vals}")
             exit(0)
