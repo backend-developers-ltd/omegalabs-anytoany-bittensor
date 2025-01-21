@@ -29,6 +29,10 @@ ifeq ($(WANDB), off)
 endif
 FLAGS ?=
 
+build-and-push:
+	docker build -t backenddevelopersltd/slawek-test:v0-latest .
+	docker push backenddevelopersltd/slawek-test:v0-latest
+
 validator: a2a
 	docker run -it --detach --restart always \
 		--ipc=host --ulimit memlock=-1 --ulimit stack=67108864 --gpus=all \
@@ -50,6 +54,7 @@ manual-validator: a2a
 		-e TQDM_DISABLE=True \
 		--env-file .env \
 		--name omega-a2a-validator \
+		--add-host=host.docker.internal:host-gateway \
 		a2a \
 		python neurons/validator.py --netuid $(NETUID) --wallet.name $(WALLET_NAME) --wallet.hotkey $(WALLET_HOTKEY) --port $(PORT) $(WANDBOFF) --logging.trace $(FLAGS)
 
