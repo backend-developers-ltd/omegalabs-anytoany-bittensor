@@ -31,7 +31,7 @@ class TrustedMiner:
 
 class AbstractComputationProvider(ABC):
     @abstractmethod
-    def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
+    async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         pass
 
 
@@ -44,7 +44,7 @@ class LocalComputationProvider(AbstractComputationProvider):
         self.temp_dir_cache = temp_dir_cache
         self.model_tracker = model_tracker
 
-    def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
+    async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         # TODO: Move this somewhere else (model scoring)? so that it can be reused by trusted miner entrypoint.
         hf_repo_id = model_metadata.id.namespace + "/" + model_metadata.id.name
         local_dir = self.temp_dir_cache.get_temp_dir(hf_repo_id)

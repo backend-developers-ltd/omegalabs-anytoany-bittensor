@@ -990,7 +990,7 @@ class Validator:
                         uid_to_block[uid_i] = model_i_metadata.block
                         start_time = time.time()
 
-                        score = self.computation_provider.score_model(
+                        score = await self.computation_provider.score_model(
                             competition_id=competition_parameters.competition_id,
                             hotkey=hotkey,
                             model_metadata=model_i_metadata,
