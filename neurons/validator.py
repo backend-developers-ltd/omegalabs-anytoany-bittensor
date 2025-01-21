@@ -18,6 +18,7 @@
 
 import os
 
+from constants import TRUSTED_MINER_ADDRESS, TRUSTED_MINER_PORT, TRUSTED_MINER_HOTKEY
 from neurons.computation_providers import ComputeHordeComputationProvider, TrustedMiner, LocalComputationProvider, \
     DatasetNotAvailable
 
@@ -450,13 +451,15 @@ class Validator:
 
         use_compute_horde = False
         if use_compute_horde:
+            if _missing_settings := [s for s in ('TRUSTED_MINER_ADDRESS', 'TRUSTED_MINER_PORT', 'TRUSTED_MINER_HOTKEY') if globals().get(s) is None]:
+                raise RuntimeError(f"Required settings: {', '.join(_missing_settings)}. Add them to your .env file.")
             self.computation_provider = ComputeHordeComputationProvider(wallet=self.wallet, trusted_miner=TrustedMiner(
-                address='',
-                port=0,
-                hotkey='dummy',
+                address=TRUSTED_MINER_ADDRESS,
+                port=TRUSTED_MINER_PORT,
+                hotkey=TRUSTED_MINER_HOTKEY,
             ))
         else:
-            self.computation_provider = LocalComputationProvider()
+            self.computation_provider = LocalComputationProvider(temp_dir_cache=self.temp_dir_cache, model_tracker=self.model_tracker)
 
     def __del__(self):
         if hasattr(self, "stop_event"):
@@ -886,7 +889,7 @@ class Validator:
         bt.logging.info(f"Getting model to score...")
         if self.config.offline:
             # If offline, pick miner UID randomly.
-            uid = self.miner_iterator.peek()
+            uid = self.miner_iterator.miner_uids[random.randint(0, len(self.miner_iterator.miner_uids) - 1)]
         else:
             uid = await self.get_model_to_score(competition_parameters.competition_id)
 

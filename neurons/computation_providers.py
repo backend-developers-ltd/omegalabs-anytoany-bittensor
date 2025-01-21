@@ -6,9 +6,11 @@ import bittensor as bt
 from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
 
 from model.data import ModelMetadata
+from model.model_tracker import ModelTracker
 from neurons.job_generator import ValidationJobGenerator
-from neurons.model_scoring import pull_latest_omega_dataset, get_model_score
+from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf
 from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics
+from utilities.temp_dir_cache import TempDirCache
 
 
 class DatasetNotAvailable(Exception):
@@ -35,22 +37,28 @@ class LocalComputationProvider(AbstractComputationProvider):
     Runs computations on the same machine that the validator is running on.
     """
 
+    def __init__(self, temp_dir_cache: TempDirCache, model_tracker: ModelTracker | None):
+        self.temp_dir_cache = temp_dir_cache
+        self.model_tracker = model_tracker
+
     def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         # TODO: Move this somewhere else (model scoring)? so that it can be reused by trusted miner entrypoint.
-
         hf_repo_id = model_metadata.id.namespace + "/" + model_metadata.id.name
+        local_dir = self.temp_dir_cache.get_temp_dir(hf_repo_id)
+
         if competition_id == "o1":
             eval_data = pull_latest_omega_dataset()
             if eval_data is None:
                 raise DatasetNotAvailable()
 
+            model_files = get_model_files_from_hf(hf_repo_id, local_dir)
+
             score = get_model_score(
-                hf_repo_id,
-                mini_batch=eval_data,
-                local_dir=self.temp_dir_cache.get_temp_dir(hf_repo_id),
                 hotkey=hotkey,
-                block=model_metadata.block,
-                model_tracker=self.model_tracker
+                model_metadata=model_metadata,
+                model_files=model_files,
+                mini_batch=eval_data,
+                model_tracker=self.model_tracker,
             )
         elif competition_id == "v1":
             eval_data_v2v = pull_latest_diarization_dataset()

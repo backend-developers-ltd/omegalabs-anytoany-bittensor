@@ -140,6 +140,7 @@ def get_model_score(hotkey: str, model_metadata: ModelMetadata, model_files: Mod
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
     hf_repo_id = model_metadata.id.namespace + '/' + model_metadata.id.name
+    block = model_metadata.block
 
     inference_recipe, config = get_inference_recipe(model_files, videobind_path)
 
