@@ -55,7 +55,7 @@ class InferenceRecipe:
         self._perception_tokens = ("0 " * perception_tokens)[:perception_tokens]
         utils.set_seed(seed=cfg.seed)
 
-    def setup(self, cfg: DictConfig) -> None:
+    def setup(self, cfg: DictConfig, videobind_path: str | None = None) -> None:
         checkpointer = config.instantiate(cfg.checkpointer)
         if self._quantization_mode is None:
             ckpt_dict = checkpointer.load_checkpoint()
@@ -73,7 +73,7 @@ class InferenceRecipe:
             self._model.setup_caches(max_batch_size=cfg.batch_size, dtype=self._dtype)
 
         #self._embed_model = self._setup_embed_model(model_cfg=DictConfig({"_component_": "models.imagebind_huge"}))
-        self._embed_model = ImageBind(v2=True)
+        self._embed_model = ImageBind(v2=True, videobind_path=videobind_path)
         self._tokenizer = config.instantiate(cfg.tokenizer)
         self._mm_ids_start = self._tokenizer.encode(START_IMAGE + START_AUDIO + START_VIDEO, add_eos=False, add_bos=False)
         self._mm_ids_end = self._tokenizer.encode(END_IMAGE + END_AUDIO + END_VIDEO, add_eos=False, add_bos=False)
