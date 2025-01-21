@@ -18,10 +18,6 @@
 
 import os
 
-from constants import TRUSTED_MINER_ADDRESS, TRUSTED_MINER_PORT, TRUSTED_MINER_HOTKEY, USE_COMPUTE_HORDE_TRUSTED_MINER
-from neurons.computation_providers import ComputeHordeComputationProvider, TrustedMiner, LocalComputationProvider, \
-    DatasetNotAvailable
-
 os.environ["USE_TORCH"] = "1"
 os.environ["BT_LOGGING_INFO"] = "1"
 
@@ -85,6 +81,9 @@ from neurons.v2v_scoring import (
     pull_latest_diarization_dataset,
     MIN_AGE as V2V_MIN_AGE,
 )
+from constants import TRUSTED_MINER_ADDRESS, TRUSTED_MINER_PORT, TRUSTED_MINER_HOTKEY, USE_COMPUTE_HORDE_TRUSTED_MINER
+from neurons.computation_providers import ComputeHordeComputationProvider, TrustedMiner, LocalComputationProvider, \
+    DatasetNotAvailable
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
