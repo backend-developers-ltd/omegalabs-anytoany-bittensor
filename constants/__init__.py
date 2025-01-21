@@ -1,7 +1,12 @@
+import os
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Type, Optional, Any, List, Tuple
+from typing import List
 import math
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @dataclass
@@ -71,3 +76,15 @@ CHECKPOINTS_RELATIVE_PATH = 'checkpoints'
 
 OUTPUT_FILENAME = 'output.json'
 DATASET_FILENAME = 'dataset.json'
+
+TRUSTED_MINER_ADDRESS = os.getenv("TRUSTED_MINER_ADDRESS")
+miner_port_str = os.getenv("TRUSTED_MINER_PORT")
+TRUSTED_MINER_PORT = int(miner_port_str) if miner_port_str else None
+TRUSTED_MINER_HOTKEY = os.getenv("TRUSTED_MINER_HOTKEY")
+
+# TODO: Remove S3 stuff
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL", "")
+COMPUTE_HORDE_VALIDATION_S3_BUCKET = os.getenv("COMPUTE_HORDE_VALIDATION_S3_BUCKET", default="https://s3.amazonaws.com")
