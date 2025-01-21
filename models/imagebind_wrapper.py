@@ -7,8 +7,10 @@ from imagebind import imagebind_model
 from imagebind.models.imagebind_model import ModalityType
 from imagebind.models.multimodal_preprocessors import SimpleTokenizer, TextPreprocessor
 
+from constants import VIDEOBIND_HF_REPO_ID, VIDEOBIND_FILENAME
 
-V2_URL = "https://huggingface.co/jondurbin/videobind-v0.2/resolve/main/videobind.pth"
+
+V2_URL = f"https://huggingface.co/{VIDEOBIND_HF_REPO_ID}/resolve/main/{VIDEOBIND_FILENAME}"
 V2_PATH = "./.checkpoints/videobind-v0.2.pth"
 BPE_PATH = "./models/bpe_simple_vocab_16e6.txt.gz"
 TOKENIZER = SimpleTokenizer(bpe_path=BPE_PATH)
@@ -87,18 +89,19 @@ def load_and_transform_text_chunks(text, device):
 
 
 class ImageBind:
-    def __init__(self, device="cuda:0", v2=False):
+    def __init__(self, device="cuda:0", v2=False, videobind_path: str | None = None):
         self.device = device
         self.v2 = v2
         if v2:
-            if not os.path.exists(V2_PATH):
-                os.makedirs(os.path.dirname(V2_PATH), exist_ok=True)
+            path = videobind_path or V2_PATH
+            if not os.path.exists(path):
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 torch.hub.download_url_to_file(
                     V2_URL,
-                    V2_PATH,
+                    path,
                     progress=True,
                 )
-            self.imagebind = torch.load(V2_PATH)
+            self.imagebind = torch.load(path)
         else:
             self.imagebind = imagebind_model.imagebind_huge(pretrained=True)
         self.imagebind.eval()

@@ -1,7 +1,8 @@
 import os
+from dataclasses import dataclass
 from tempfile import TemporaryDirectory
 import time
-from typing import List, Optional
+from typing import Optional
 from pathlib import Path
 import subprocess
 
@@ -13,9 +14,9 @@ from datasets import load_dataset, Dataset, DownloadConfig
 
 import bittensor as bt
 
+from model.data import ModelMetadata
+from model.model_tracker import ModelTracker
 from tune_recipes.gen import InferenceRecipe
-from models.imagebind_wrapper import ImageBind
-
 
 HF_DATASET = "omegalabsinc/omega-multimodal"
 DATA_FILES_PREFIX = "default/train/"
@@ -25,11 +26,19 @@ MODEL_FILE_PREFIX = "meta_model"
 CONFIG_FILE = "training_config.yml"
 
 
+@dataclass
+class ModelFiles:
+    training_config_path: str
+    checkpoint_path: str
+    hotkey_path: str | None = None
+
+
+
 def get_timestamp_from_filename(filename: str):
     return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
 
 
-def pull_latest_omega_dataset() -> Optional[Dataset]:
+def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[Dataset]:
     omega_ds_files = huggingface_hub.repo_info(repo_id=HF_DATASET, repo_type="dataset").siblings
     recent_files = [
         f.rfilename
@@ -48,22 +57,17 @@ def pull_latest_omega_dataset() -> Optional[Dataset]:
     return omega_dataset
 
 
-def load_ckpt_from_hf(hf_repo_id: str, local_dir: str, target_file: str = "hotkey.txt") -> InferenceRecipe:
+def get_model_files_from_hf(hf_repo_id: str, local_dir: str, hotkey_file: str = "hotkey.txt") -> ModelFiles:
     repo_dir = Path(local_dir) / hf_repo_id
     bt.logging.info(f"Loading ckpt {hf_repo_id}, repo_dir: {repo_dir}")
-
     hf_api = huggingface_hub.HfApi()
-
-    # Download and read the target file
-    target_file_contents = None
+    hotkey_file_path = None
     try:
-        target_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=target_file, local_dir=repo_dir)
-        with open(target_file_path, 'r') as file:
-            target_file_contents = file.read()
+        hotkey_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=hotkey_file, local_dir=repo_dir)
     except huggingface_hub.utils.EntryNotFoundError:
-        bt.logging.warning(f"Warning: File '{target_file}' not found in the repository.")
+        bt.logging.warning(f"Warning: File '{hotkey_file}' not found in the repository.")
     except Exception as e:
-        bt.logging.warning(f"An error occurred while trying to read '{target_file}': {str(e)}")
+        bt.logging.warning(f"An error occurred while trying to read '{hotkey_file}': {str(e)}")
 
     ckpt_files = [f for f in hf_api.list_repo_files(repo_id=hf_repo_id) if f.startswith(MODEL_FILE_PREFIX)]
     if len(ckpt_files) == 0:
@@ -71,20 +75,47 @@ def load_ckpt_from_hf(hf_repo_id: str, local_dir: str, target_file: str = "hotke
 
     config_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=CONFIG_FILE, local_dir=repo_dir)
     ckpt_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=ckpt_files[0], local_dir=repo_dir)
-    train_cfg = OmegaConf.load(config_path)
+
+    return ModelFiles(
+        training_config_path=config_path,
+        checkpoint_path=ckpt_path,
+        hotkey_path=hotkey_file_path,
+    )
+
+
+def get_model_files_from_disk(model_dir: str, hotkey_file: str = "hotkey.txt") -> ModelFiles:
+    model_dir = Path(model_dir)
+
+    def get_ckpt_path() -> str:
+        for path in model_dir.iterdir():
+            if path.name.startswith(MODEL_FILE_PREFIX):
+                return str(path)
+        raise ValueError(f"No checkpoint files found in {model_dir}")
+
+    return ModelFiles(
+        training_config_path=str(model_dir / CONFIG_FILE),
+        checkpoint_path=get_ckpt_path(),
+        hotkey_path=str(model_dir / hotkey_file),
+    )
+
+
+def get_inference_recipe(model_files: ModelFiles, videobind_path: str | None = None) -> tuple[
+    InferenceRecipe, DictConfig]:
+    # Note: if videobind_path is None, will try to download file from HF.
+    train_cfg = OmegaConf.load(model_files.training_config_path)
     train_cfg.model = DictConfig({
         "_component_": "models.mmllama3_8b",
         "use_clip": False,
         "perception_tokens": train_cfg.model.perception_tokens,
     })
     train_cfg.batch_size = 4
-    train_cfg.checkpointer.checkpoint_dir = os.path.dirname(ckpt_path)
-    train_cfg.checkpointer.checkpoint_files = [os.path.basename(ckpt_path)]
+    train_cfg.checkpointer.checkpoint_dir = os.path.dirname(model_files.checkpoint_path)
+    train_cfg.checkpointer.checkpoint_files = [os.path.basename(model_files.checkpoint_path)]
     train_cfg.inference.max_new_tokens = 300
     train_cfg.tokenizer.path = "./models/tokenizer.model"
     inference_recipe = InferenceRecipe(train_cfg)
-    inference_recipe.setup(cfg=train_cfg)
-    return inference_recipe, train_cfg, target_file_contents
+    inference_recipe.setup(cfg=train_cfg, videobind_path=videobind_path)
+    return inference_recipe, train_cfg
 
 
 def get_gpu_memory():
@@ -105,10 +136,17 @@ def cleanup_gpu_memory():
     torch.cuda.ipc_collect()
 
 
-def get_model_score(hf_repo_id, mini_batch, local_dir, hotkey, block, model_tracker):
+def get_model_score(hotkey: str, model_metadata: ModelMetadata, model_files: ModelFiles, mini_batch: dict, model_tracker: ModelTracker, videobind_path: str | None = None) -> float:
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
-    inference_recipe, config, hotkey_file_contents = load_ckpt_from_hf(hf_repo_id, local_dir)
+    hf_repo_id = model_metadata.id.namespace + '/' + model_metadata.id.name
+
+    inference_recipe, config = get_inference_recipe(model_files, videobind_path)
+
+    hotkey_file_contents = None
+    if model_files.hotkey_path:
+        with open(model_files.hotkey_path) as f:
+            hotkey_file_contents = f.read()
 
     # Check if the contents of license file are the same as the hotkey if in repo
     if hotkey_file_contents is not None and hotkey_file_contents != hotkey:
@@ -175,4 +213,4 @@ if __name__ == "__main__":
             hotkey = "hotkey"
             block = 1
             model_tracker = None
-            get_model_score(hf_repo_id, mini_batch, local_dir, hotkey, block, model_tracker)
+            #1get_model_score(hf_repo_id, mini_batch, local_dir, hotkey, block, model_tracker)
