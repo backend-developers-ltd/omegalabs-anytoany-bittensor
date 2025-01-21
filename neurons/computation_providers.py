@@ -1,3 +1,4 @@
+import json
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 
@@ -9,6 +10,7 @@ from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
 from neurons.job_generator import ValidationJobGenerator
 from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf
+from neurons.s3 import upload_data_to_s3
 from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics
 from utilities.temp_dir_cache import TempDirCache
 
@@ -91,7 +93,15 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
 
     async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         assert competition_id == 'o1'
-        data_sample_url = '...'
+
+        data_sample: dict | None = pull_latest_omega_dataset(shuffle_seed=0)
+        if data_sample is None:
+            raise RuntimeError("Could not load data sample.")
+
+        bt.logging.info("Uploading data sample to S3.")
+
+        data_sample_url = upload_data_to_s3(json.dumps(data_sample))
+
         job_generator = ValidationJobGenerator(
             competition_id=competition_id,
             hotkey=hotkey,

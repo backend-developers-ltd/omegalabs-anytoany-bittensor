@@ -136,7 +136,7 @@ def cleanup_gpu_memory():
     torch.cuda.ipc_collect()
 
 
-def get_model_score(hotkey: str, model_metadata: ModelMetadata, model_files: ModelFiles, mini_batch: dict, model_tracker: ModelTracker, videobind_path: str | None = None) -> float:
+def get_model_score(hotkey: str, model_metadata: ModelMetadata, model_files: ModelFiles, mini_batch: dict, model_tracker: ModelTracker | None, videobind_path: str | None = None) -> float:
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
     hf_repo_id = model_metadata.id.namespace + '/' + model_metadata.id.name

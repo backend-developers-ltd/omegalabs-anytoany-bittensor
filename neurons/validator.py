@@ -18,7 +18,7 @@
 
 import os
 
-from constants import TRUSTED_MINER_ADDRESS, TRUSTED_MINER_PORT, TRUSTED_MINER_HOTKEY
+from constants import TRUSTED_MINER_ADDRESS, TRUSTED_MINER_PORT, TRUSTED_MINER_HOTKEY, USE_COMPUTE_HORDE_TRUSTED_MINER
 from neurons.computation_providers import ComputeHordeComputationProvider, TrustedMiner, LocalComputationProvider, \
     DatasetNotAvailable
 
@@ -449,8 +449,7 @@ class Validator:
         else:
             bt.logging.warning("Auto update disabled.")
 
-        use_compute_horde = False
-        if use_compute_horde:
+        if USE_COMPUTE_HORDE_TRUSTED_MINER:
             if _missing_settings := [s for s in ('TRUSTED_MINER_ADDRESS', 'TRUSTED_MINER_PORT', 'TRUSTED_MINER_HOTKEY') if globals().get(s) is None]:
                 raise RuntimeError(f"Required settings: {', '.join(_missing_settings)}. Add them to your .env file.")
             self.computation_provider = ComputeHordeComputationProvider(wallet=self.wallet, trusted_miner=TrustedMiner(

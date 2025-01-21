@@ -12,9 +12,9 @@ from constants import (
     OUTPUT_DIR,
     OUTPUT_FILENAME,
 )
-from model.data import ModelId
+from model.data import ModelId, ModelMetadata
 from model.storage.disk.utils import get_local_model_snapshot_dir
-from neurons.model_scoring import get_model_score, ModelLoadConfig
+from neurons.model_scoring import get_model_score, get_model_files_from_disk
 
 
 def parse_arguments():
@@ -51,7 +51,7 @@ def parse_arguments():
 
 
 def score_model(
-    competition_id: str, hotkey: str, model_id: ModelId, block: int, models_dir: str
+    competition_id: str, hotkey: str, model_metadata: ModelMetadata, models_dir: str
 ) -> tuple[float, float]:
     if competition_id != ORIGINAL_COMPETITION_ID:
         raise ValueError(f"Competition ID must be '{ORIGINAL_COMPETITION_ID}' for now.")
@@ -64,20 +64,19 @@ def score_model(
 
     data_sample = json.loads(dataset_raw)
 
-    hf_repo_id = model_id.namespace + "/" + model_id.name
-    local_dir = get_local_model_snapshot_dir(models_dir, hotkey, model_id)
+    model_dir = get_local_model_snapshot_dir(models_dir, hotkey, model_metadata.id)
+    model_files = get_model_files_from_disk(model_dir)
+
     videobind_path = VOLUME_DIR / CHECKPOINTS_RELATIVE_PATH / VIDEOBIND_FILENAME
 
     logging.info("Scoring model")
 
     score = get_model_score(
-        hf_repo_id=hf_repo_id,
-        mini_batch=data_sample,
-        local_dir=local_dir,
         hotkey=hotkey,
-        block=block,
+        model_metadata=model_metadata,
+        model_files=model_files,
+        mini_batch=data_sample,
         model_tracker=None,
-        load_config=ModelLoadConfig.FROM_DISK,
         videobind_path=videobind_path,
     )
 
@@ -92,9 +91,10 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     model_id = ModelId.from_compressed_str(args.model_id)
+    model_metadata = ModelMetadata(id=model_id, block=args.block)
 
     score, total_s = score_model(
-        args.competition_id, args.hotkey, model_id, args.block, args.models_dir
+        args.competition_id, args.hotkey, model_metadata, args.models_dir
     )
     result = {"score": score, "total_s": total_s}
 

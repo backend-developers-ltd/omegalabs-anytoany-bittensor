@@ -65,6 +65,8 @@ timestamp_epsilon = 0.01
 # Constants for running with a trusted miner.
 # ---------------------------------
 
+USE_COMPUTE_HORDE_TRUSTED_MINER = os.getenv("USE_COMPUTE_HORDE_TRUSTED_MINER") in ("1", "true", "yes")
+
 VIDEOBIND_HF_REPO_ID = 'jondurbin/videobind-v0.2'
 VIDEOBIND_FILENAME = 'videobind.pth'
 
