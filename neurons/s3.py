@@ -6,7 +6,6 @@ import httpx
 import boto3
 
 from constants import (
-
     COMPUTE_HORDE_VALIDATION_S3_BUCKET, AWS_ENDPOINT_URL, AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID)
 
 logger = logging.getLogger(__name__)
