@@ -40,6 +40,8 @@ COPY README.md .
 COPY template/__init__.py ./template/__init__.py
 RUN python -m pip install uv
 RUN python -m uv pip install -r requirements.txt --prerelease=allow --no-cache-dir
+# Bypass pip resolution, as compute-horde doesn't work with bittensor 8.5 yet
+RUN python -m uv pip install compute_horde==0.0.20 --no-cache-dir
 RUN python -m pip install -e .
 COPY . .
 
