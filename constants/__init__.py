@@ -84,6 +84,8 @@ miner_port_str = os.getenv("TRUSTED_MINER_PORT")
 TRUSTED_MINER_PORT = int(miner_port_str) if miner_port_str else None
 TRUSTED_MINER_HOTKEY = os.getenv("TRUSTED_MINER_HOTKEY")
 
+EXECUTOR_CLASS = os.getenv("EXECUTOR_CLASS")
+
 # TODO: Remove S3 stuff
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
