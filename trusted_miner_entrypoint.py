@@ -89,6 +89,8 @@ def score_model(
             hf_repo_id=model_metadata.id.hf_repo_id(),
             local_dir=models_dir,
             mini_batch=Dataset.from_dict(data_sample),
+            hotkey=hotkey,
+            block=model_metadata.block,
             model_tracker=None,
             mimi_weight_path=VOLUME_DIR / 'tezuesh/mimi/tokenizer-e351c8d8-checkpoint125.safetensors',
             whisper_model_dir_path=VOLUME_DIR / 'openai/whisper-large-v2',
