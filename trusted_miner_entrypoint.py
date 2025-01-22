@@ -87,7 +87,9 @@ def score_model(
         score = compute_s2s_metrics(
             model_id='moshi',  # update this to the model id as we support more models.
             hf_repo_id=model_metadata.id.hf_repo_id(),
-            local_dir=models_dir,
+            local_dir=get_local_model_snapshot_dir(
+                models_dir, hotkey, model_metadata.id
+            ),
             mini_batch=Dataset.from_dict(data_sample),
             hotkey=hotkey,
             block=model_metadata.block,
