@@ -121,12 +121,12 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                         revision=None,
                         relative_path=CHECKPOINTS_RELATIVE_PATH,
                     ),
-                ]
+                ],
             )
 
             score = await self.run_validation_job(job_generator)
         elif competition_id == 'v1':
-            data_sample: dict | None = pull_latest_diarization_dataset()
+            data_sample = pull_latest_diarization_dataset()
             if data_sample is None:
                 raise RuntimeError("Could not load data sample.")
 
@@ -157,7 +157,7 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                         revision=None,
                         relative_path='tezuesh/mimi',
                     ),
-                ]
+                ],
             )
 
             score = await self.run_validation_job(job_generator)

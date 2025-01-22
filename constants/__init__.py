@@ -70,8 +70,6 @@ USE_COMPUTE_HORDE_TRUSTED_MINER = os.getenv("USE_COMPUTE_HORDE_TRUSTED_MINER") i
 VIDEOBIND_HF_REPO_ID = 'jondurbin/videobind-v0.2'
 VIDEOBIND_FILENAME = 'videobind.pth'
 
-OPENA
-
 VOLUME_DIR = Path('/volume')
 OUTPUT_DIR = Path('/output')
 

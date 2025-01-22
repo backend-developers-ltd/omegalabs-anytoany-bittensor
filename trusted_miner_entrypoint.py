@@ -15,6 +15,7 @@ from constants import (
 from model.data import ModelId, ModelMetadata
 from model.storage.disk.utils import get_local_model_snapshot_dir
 from neurons.model_scoring import get_model_score, get_model_files_from_disk
+from neurons.v2v_scoring import compute_s2s_metrics
 
 
 def parse_arguments():
@@ -53,32 +54,43 @@ def parse_arguments():
 def score_model(
     competition_id: str, hotkey: str, model_metadata: ModelMetadata, models_dir: str
 ) -> tuple[float, float]:
-    if competition_id != ORIGINAL_COMPETITION_ID:
-        raise ValueError(f"Competition ID must be '{ORIGINAL_COMPETITION_ID}' for now.")
-
     st = time.time()
     logging.info("Loading data sample")
 
-    with open(VOLUME_DIR / DATASET_FILENAME) as f:
-        dataset_raw = f.read()
-
-    data_sample = json.loads(dataset_raw)
-
     model_dir = get_local_model_snapshot_dir(models_dir, hotkey, model_metadata.id)
-    model_files = get_model_files_from_disk(model_dir)
 
-    videobind_path = VOLUME_DIR / CHECKPOINTS_RELATIVE_PATH / VIDEOBIND_FILENAME
+    if competition_id == 'o1':
+        with open(VOLUME_DIR / DATASET_FILENAME) as f:
+            dataset_raw = f.read()
 
-    logging.info("Scoring model")
+        data_sample = json.loads(dataset_raw)
 
-    score = get_model_score(
-        hotkey=hotkey,
-        model_metadata=model_metadata,
-        model_files=model_files,
-        mini_batch=data_sample,
-        model_tracker=None,
-        videobind_path=videobind_path,
-    )
+        model_files = get_model_files_from_disk(model_dir)
+
+        videobind_path = VOLUME_DIR / CHECKPOINTS_RELATIVE_PATH / VIDEOBIND_FILENAME
+
+        logging.info("Scoring model")
+
+        score = get_model_score(
+            hotkey=hotkey,
+            model_metadata=model_metadata,
+            model_files=model_files,
+            mini_batch=data_sample,
+            model_tracker=None,
+            videobind_path=videobind_path,
+        )
+    elif competition_id == 'v1':
+        logging.info("Scoring model")
+
+        score = compute_s2s_metrics(
+            model_id='?',
+            hf_repo_id=model_metadata.id.hf_repo_id(),
+            local_dir='?',
+            mini_batch='...', # TODO
+
+        )
+    else:
+        raise ValueError(f"Invalid competition ID: {competition_id}")
 
     logging.info(f"Returned score: {score}")
 
