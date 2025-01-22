@@ -227,9 +227,18 @@ def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_bat
 
 
 if __name__ == "__main__":
+    # this snippet below is necessary to avoid double logging and extraneous logging caused by torchtune
+    # import logging
+    # import torchtune
+    #
+    # logging.root.handlers = []
+    # logging.root.manager.loggerDict = {}
+    # logging.root.level = logging.root.level
+    #
+    # bt.logging.set_info()
+
     from utilities.temp_dir_cache import TempDirCache
 
-    bt.logging.set_info()
     temp_dir_cache = TempDirCache(10)
     for epoch in range(2):
         for hf_repo_id in ["tezuesh/moshi1", "tezuesh/moshi7"]:
@@ -244,8 +253,10 @@ if __name__ == "__main__":
             hotkey = '5FeqmebkCWfepQPgSkrEHRwtpUmHGASF4BNERZDs9pvKFtcD'
             block = 1
             model_tracker = None
-            vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker)
+            whisper_model_dir_path = './model_cache/models--openai--whisper-large-v2/snapshots/ae4642769ce2ad8fc292556ccea8e901f1530655'
+            vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker, whisper_model_dir_path=whisper_model_dir_path)
             end_time = time.time()
             bt.logging.info(f"I am here {hf_repo_id} Time taken: {end_time - start_time:.2f} seconds")
             bt.logging.info(f"Combined score: {vals}")
+            print(f"Score={vals}, took {end_time - start_time}s.")
             exit(0)
