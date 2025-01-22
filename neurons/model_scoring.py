@@ -38,7 +38,7 @@ def get_timestamp_from_filename(filename: str):
     return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
 
 
-def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[Dataset]:
+def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[dict]:
     omega_ds_files = huggingface_hub.repo_info(repo_id=HF_DATASET, repo_type="dataset").siblings
     recent_files = [
         f.rfilename
@@ -53,7 +53,7 @@ def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[Datas
 
     with TemporaryDirectory(dir='./data_cache') as temp_dir:
         omega_dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)["train"]
-        omega_dataset = next(omega_dataset.shuffle().iter(batch_size=64))
+        omega_dataset = next(omega_dataset.shuffle(seed=shuffle_seed).iter(batch_size=64))
     return omega_dataset
 
 

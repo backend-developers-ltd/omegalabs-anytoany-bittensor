@@ -32,7 +32,7 @@ def get_timestamp_from_filename(filename: str):
     return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
 
 
-def pull_latest_diarization_dataset() -> Optional[Dataset]:
+def pull_latest_diarization_dataset() -> Optional[dict]:
     omega_ds_files = huggingface_hub.repo_info(repo_id=HF_DATASET, repo_type="dataset").siblings
     recent_files = [
         f.rfilename
@@ -81,8 +81,7 @@ def pull_latest_diarization_dataset() -> Optional[Dataset]:
         if len(overall_dataset['audio']) < 1:
             return None
 
-        # Convert back to Dataset
-        return Dataset.from_dict(overall_dataset)
+        return overall_dataset
 
 
 def get_gpu_memory():

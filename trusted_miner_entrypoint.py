@@ -3,6 +3,8 @@ import json
 import logging
 import time
 
+from datasets import Dataset
+
 from constants import (
     VIDEOBIND_FILENAME,
     ORIGINAL_COMPETITION_ID,
@@ -57,14 +59,14 @@ def score_model(
     st = time.time()
     logging.info("Loading data sample")
 
+    with open(VOLUME_DIR / DATASET_FILENAME) as f:
+        dataset_raw = f.read()
+
+    data_sample = json.loads(dataset_raw)
+
     model_dir = get_local_model_snapshot_dir(models_dir, hotkey, model_metadata.id)
 
     if competition_id == 'o1':
-        with open(VOLUME_DIR / DATASET_FILENAME) as f:
-            dataset_raw = f.read()
-
-        data_sample = json.loads(dataset_raw)
-
         model_files = get_model_files_from_disk(model_dir)
 
         videobind_path = VOLUME_DIR / CHECKPOINTS_RELATIVE_PATH / VIDEOBIND_FILENAME
@@ -83,11 +85,14 @@ def score_model(
         logging.info("Scoring model")
 
         score = compute_s2s_metrics(
-            model_id='?',
+            model_id='moshi',  # update this to the model id as we support more models.
             hf_repo_id=model_metadata.id.hf_repo_id(),
-            local_dir='?',
-            mini_batch='...', # TODO
-
+            local_dir=models_dir,
+            mini_batch=Dataset.from_dict(data_sample),
+            model_tracker=None,
+            mimi_weight_path=VOLUME_DIR / 'tezuesh/mimi/tokenizer-e351c8d8-checkpoint125.safetensors',
+            whisper_model_dir_path=VOLUME_DIR / 'openai/whisper-large-v2',
+            rawnet3_model_path=VOLUME_DIR / 'jungjee/RawNet3/model.pt',
         )
     else:
         raise ValueError(f"Invalid competition ID: {competition_id}")

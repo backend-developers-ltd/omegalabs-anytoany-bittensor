@@ -4,15 +4,12 @@ from dataclasses import dataclass
 
 import bittensor as bt
 from compute_horde.base.volume import HuggingfaceVolume
+from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
+from datasets import Dataset
 
-from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job, OrganicJobDetails
-from sqlalchemy.orm.base import opt_manager_of_class
-
-from constants import EXECUTOR_CLASS, MODELS_RELATIVE_PATH, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH
-from miner_utils.check_model import model_metadata_store
+from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
-from model.storage.disk.utils import get_local_model_snapshot_dir
 from neurons.job_generator import ValidationJobGenerator
 from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf
 from neurons.s3 import upload_data_to_s3
@@ -75,7 +72,7 @@ class LocalComputationProvider(AbstractComputationProvider):
             score = compute_s2s_metrics(
                 model_id="moshi",  # update this to the model id as we support more models.
                 hf_repo_id=hf_repo_id,
-                mini_batch=eval_data_v2v,
+                mini_batch=Dataset.from_dict(eval_data_v2v),
                 local_dir=self.temp_dir_cache.get_temp_dir(hf_repo_id),
                 hotkey=hotkey,
                 block=model_metadata.block,
@@ -100,7 +97,7 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
         assert competition_id == 'o1'
 
         if competition_id == 'o1':
-            data_sample: dict | None = pull_latest_omega_dataset(shuffle_seed=0)
+            data_sample = pull_latest_omega_dataset(shuffle_seed=0)
             if data_sample is None:
                 raise RuntimeError("Could not load data sample.")
 
