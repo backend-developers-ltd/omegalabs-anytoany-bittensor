@@ -228,7 +228,7 @@ if __name__ == "__main__":
             # local_dir = temp_dir_cache.get_temp_dir(hf_repo_id)
             local_dir = './model_cache' #temp_dir_cache.get_temp_dir(hf_repo_id)
 
-            hotkey = None
+            hotkey = '5FeqmebkCWfepQPgSkrEHRwtpUmHGASF4BNERZDs9pvKFtcD'
             block = 1
             model_tracker = None
             vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker)
