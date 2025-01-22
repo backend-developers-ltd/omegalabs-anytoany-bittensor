@@ -3,12 +3,16 @@ from abc import abstractmethod, ABC
 from dataclasses import dataclass
 
 import bittensor as bt
+from compute_horde.base.volume import HuggingfaceVolume
 
-from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
+from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job, OrganicJobDetails
+from sqlalchemy.orm.base import opt_manager_of_class
 
-from constants import EXECUTOR_CLASS
+from constants import EXECUTOR_CLASS, MODELS_RELATIVE_PATH, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH
+from miner_utils.check_model import model_metadata_store
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
+from model.storage.disk.utils import get_local_model_snapshot_dir
 from neurons.job_generator import ValidationJobGenerator
 from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf
 from neurons.s3 import upload_data_to_s3
@@ -95,25 +99,66 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
     async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         assert competition_id == 'o1'
 
-        data_sample: dict | None = pull_latest_omega_dataset(shuffle_seed=0)
-        if data_sample is None:
-            raise RuntimeError("Could not load data sample.")
+        if competition_id == 'o1':
+            data_sample: dict | None = pull_latest_omega_dataset(shuffle_seed=0)
+            if data_sample is None:
+                raise RuntimeError("Could not load data sample.")
 
-        bt.logging.info("Uploading data sample to S3.")
+            bt.logging.info("Uploading data sample to S3.")
 
-        data_sample_url = upload_data_to_s3(json.dumps(data_sample))
+            data_sample_url = upload_data_to_s3(json.dumps(data_sample))
 
-        job_generator = ValidationJobGenerator(
-            competition_id=competition_id,
-            hotkey=hotkey,
-            model_id=model_metadata.id,
-            block=model_metadata.block,
-            data_sample_url=data_sample_url,
-            docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
-            executor_class=EXECUTOR_CLASS,
-        )
+            job_generator = ValidationJobGenerator(
+                competition_id=competition_id,
+                hotkey=hotkey,
+                model_metadata=model_metadata,
+                data_sample_url=data_sample_url,
+                docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
+                executor_class=EXECUTOR_CLASS,
+                hf_volumes=[
+                    HuggingfaceVolume(
+                        repo_id=VIDEOBIND_HF_REPO_ID,
+                        revision=None,
+                        relative_path=CHECKPOINTS_RELATIVE_PATH,
+                    ),
+                ]
+            )
 
-        return await self.run_validation_job(job_generator)
+            score = await self.run_validation_job(job_generator)
+        elif competition_id == 'v1':
+            data_sample: dict | None = pull_latest_diarization_dataset()
+            if data_sample is None:
+                raise RuntimeError("Could not load data sample.")
+
+            bt.logging.info("Uploading data sample to S3.")
+
+            data_sample_url = upload_data_to_s3(json.dumps(data_sample))
+
+            job_generator = ValidationJobGenerator(
+                competition_id=competition_id,
+                hotkey=hotkey,
+                model_metadata=model_metadata,
+                data_sample_url=data_sample_url,
+                docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
+                executor_class=EXECUTOR_CLASS,
+                hf_volumes=[
+                    HuggingfaceVolume(
+                        repo_id='openai/whisper'
+                    ),
+                    HuggingfaceVolume(
+
+                    ),
+                    HuggingfaceVolume(
+
+                    ),
+                ]
+            )
+
+            score = await self.run_validation_job(job_generator)
+        else:
+            raise ValueError(f"Invalid competition ID: {competition_id}")
+
+        return score
 
 
     async def run_validation_job(self, job_generator: ValidationJobGenerator) -> float:

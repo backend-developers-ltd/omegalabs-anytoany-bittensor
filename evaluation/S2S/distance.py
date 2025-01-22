@@ -17,13 +17,14 @@ WHISPER_HF_REPO_ID = "openai/whisper-large-v2"
 
 
 class S2SMetrics:
-    def __init__(self, cache_dir: str, device: str='cuda', whisper_model_dir_path: str | None = None, rawnet3_model_path: str | None = None):
+    def __init__(self, cache_dir: str, device: str='cuda', mimi_weight_path: str | None = None, whisper_model_dir_path: str | None = None, rawnet3_model_path: str | None = None):
         
         # Load the Whisper large model and processor
         self.device = torch.device(device)
         MIMI_NAME = "tokenizer-e351c8d8-checkpoint125.safetensors"
 
-        mimi_weight_path = hf_hub_download(repo_id="tezuesh/mimi", filename=MIMI_NAME, local_dir=cache_dir)
+        if mimi_weight_path is None:
+            mimi_weight_path = hf_hub_download(repo_id="tezuesh/mimi", filename=MIMI_NAME, local_dir=cache_dir)
         
         self.mimi_model = get_mimi(mimi_weight_path, device=self.device)
         self.mimi_model.set_num_codebooks(4)  # up to 32 for mimi, but limited to 8 for moshi

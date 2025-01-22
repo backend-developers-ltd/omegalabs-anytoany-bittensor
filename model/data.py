@@ -44,8 +44,11 @@ class ModelId(BaseModel):
         """Returns a compressed string representation."""
         return f"{self.namespace}:{self.name}:{self.epoch}:{self.commit}:{self.hash}:{self.competition_id}"
 
+    def hf_repo_id(self) -> str:
+        return self.namespace + '/' + self.name
+
     @classmethod
-    def from_compressed_str(cls, cs: str) -> Type["ModelId"]:
+    def from_compressed_str(cls, cs: str) -> "ModelId":
         """Returns an instance of this class from a compressed string representation"""
         tokens = cs.split(":")
         return cls(

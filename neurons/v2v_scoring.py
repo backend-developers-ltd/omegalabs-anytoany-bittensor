@@ -127,7 +127,19 @@ def get_hotkey_file_contents(model_dir: str, target_file: str = "hotkey.txt") ->
     return target_file_contents
 
 
-def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_batch: Dataset, hotkey: str, block, model_tracker, device: str='cuda', whisper_model_dir_path: str | None = None, rawnet3_model_path: str | None = None) -> float:
+def compute_s2s_metrics(
+    model_id: str,
+    hf_repo_id: str,
+    local_dir: str,
+    mini_batch: Dataset,
+    hotkey: str,
+    block,
+    model_tracker,
+    device: str='cuda',
+    mimi_weight_path: str | None = None,
+    whisper_model_dir_path: str | None = None,
+    rawnet3_model_path: str | None = None
+) -> float:
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
 
@@ -165,7 +177,7 @@ def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_bat
         
     log_gpu_memory('after model load')
     cache_dir = "./model_cache"
-    s2s_metrics = S2SMetrics(cache_dir=cache_dir, whisper_model_dir_path=whisper_model_dir_path, rawnet3_model_path=rawnet3_model_path)
+    s2s_metrics = S2SMetrics(cache_dir=cache_dir, mimi_weight_path=mimi_weight_path, whisper_model_dir_path=whisper_model_dir_path, rawnet3_model_path=rawnet3_model_path)
     metrics = {'mimi_score': [],
                 'wer_score': [],
                 'length_penalty': [],
@@ -255,6 +267,7 @@ if __name__ == "__main__":
             model_tracker = None
             whisper_model_dir_path = '../models/openai/whisper-large-v2'
             rawnet3_model_path = '../models/jungjee/RawNet3/model.pt'
+            mimi_weight_path = '../models/tezuesh/mimi/tokenizer-e351c8d8-checkpoint125.safetensors'
             vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker, whisper_model_dir_path=whisper_model_dir_path, rawnet3_model_path=rawnet3_model_path)
             end_time = time.time()
             bt.logging.info(f"I am here {hf_repo_id} Time taken: {end_time - start_time:.2f} seconds")

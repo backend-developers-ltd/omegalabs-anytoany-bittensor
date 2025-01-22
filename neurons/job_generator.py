@@ -11,16 +11,14 @@ import uuid
 from compute_horde.executor_class import ExecutorClass, DEFAULT_EXECUTOR_CLASS
 from compute_horde.miner_client.organic import OrganicJobDetails
 
-from model.data import ModelId
-from model.storage.disk.utils import get_local_model_snapshot_dir
+from model.data import ModelMetadata
 from constants import (
-    VIDEOBIND_HF_REPO_ID,
     VOLUME_DIR,
     MODELS_RELATIVE_PATH,
-    CHECKPOINTS_RELATIVE_PATH,
     DATASET_FILENAME,
     OUTPUT_FILENAME,
 )
+from model.storage.disk.utils import get_local_model_snapshot_dir
 from neurons.s3 import generate_upload_url, download_file_content, get_public_url
 
 
@@ -29,18 +27,18 @@ class ValidationJobGenerator:
         self,
         competition_id: str,
         hotkey: str,
-        model_id: ModelId,
-        block: int,
+        model_metadata: ModelMetadata,
         data_sample_url: str,
         docker_image_name: str,
+        hf_volumes: list[HuggingfaceVolume],
         executor_class: str | None = None,
     ) -> None:
         self.competition_id = competition_id
         self.hotkey = hotkey
-        self.model_id = model_id
-        self.block = block
+        self.model_metadata = model_metadata
         self.data_sample_url = data_sample_url
         self._docker_image_name = docker_image_name
+        self.hf_volumes = hf_volumes
         self._executor_class = (
             ExecutorClass(executor_class) if executor_class else DEFAULT_EXECUTOR_CLASS
         )
@@ -68,9 +66,9 @@ class ValidationJobGenerator:
             "--hotkey",
             self.hotkey,
             "--model-id",
-            self.model_id.to_compressed_str(),
+            self.model_metadata.id.to_compressed_str(),
             "--block",
-            str(self.block),
+            str(self.model_metadata.block),
             "--models-dir",
             str(VOLUME_DIR / MODELS_RELATIVE_PATH),
         ]
@@ -87,17 +85,13 @@ class ValidationJobGenerator:
         return MultiVolume(
             volumes=[
                 HuggingfaceVolume(
-                    repo_id=self.model_id.namespace + "/" + self.model_id.name,
-                    revision=self.model_id.commit,
+                    repo_id=self.model_metadata.id.hf_repo_id(),
+                    revision=self.model_metadata.id.commit,
                     relative_path=get_local_model_snapshot_dir(
-                        MODELS_RELATIVE_PATH, self.hotkey, self.model_id
+                        MODELS_RELATIVE_PATH, self.hotkey, self.model_metadata.id
                     ),
                 ),
-                HuggingfaceVolume(
-                    repo_id=VIDEOBIND_HF_REPO_ID,
-                    revision=None,
-                    relative_path=CHECKPOINTS_RELATIVE_PATH,
-                ),
+                *self.hf_volumes,
                 SingleFileVolume(
                     url=self.data_sample_url,
                     relative_path=DATASET_FILENAME,
