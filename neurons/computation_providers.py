@@ -2,6 +2,7 @@ import json
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 
+import numpy as np
 import bittensor as bt
 from compute_horde.base.volume import HuggingfaceVolume
 from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
@@ -28,6 +29,14 @@ class TrustedMiner:
     address: str
     port: int
     hotkey: str
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
 
 
 class AbstractComputationProvider(ABC):
@@ -127,7 +136,7 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
 
             bt.logging.info("Uploading data sample to S3.")
 
-            data_sample_url = upload_data_to_s3(json.dumps(data_sample))
+            data_sample_url = upload_data_to_s3(json.dumps(data_sample, cls=NumpyEncoder))
 
             job_generator = ValidationJobGenerator(
                 competition_id=competition_id,
