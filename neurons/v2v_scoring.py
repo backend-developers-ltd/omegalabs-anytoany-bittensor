@@ -142,9 +142,8 @@ def compute_s2s_metrics(
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
 
-    repo_dir = Path(local_dir) / hf_repo_id
-    inference_recipe = s2s_inference(model_id, hf_repo_id, repo_dir, device)
-    hotkey_file_contents = get_hotkey_file_contents(repo_dir)
+    inference_recipe = s2s_inference(model_id, hf_repo_id, local_dir, device)
+    hotkey_file_contents = get_hotkey_file_contents(local_dir)
 
     # inference_recipe, hotkey_file_contents = load_ckpt_from_hf(model_id, hf_repo_id, local_dir=local_dir, device=device, target_file="hotkey.txt")
 
@@ -258,7 +257,7 @@ if __name__ == "__main__":
             mini_batch = pull_latest_diarization_dataset()
             bt.logging.info(f"Time taken for diarization dataset: {time.time() - diar_time:.2f} seconds")
             # local_dir = temp_dir_cache.get_temp_dir(hf_repo_id)
-            local_dir = './model_cache' #temp_dir_cache.get_temp_dir(hf_repo_id)
+            local_dir = Path('./model_cache') / hf_repo_id #temp_dir_cache.get_temp_dir(hf_repo_id)
             get_model_files_from_hf(hf_repo_id, local_dir)
 
             hotkey = '5FeqmebkCWfepQPgSkrEHRwtpUmHGASF4BNERZDs9pvKFtcD'
