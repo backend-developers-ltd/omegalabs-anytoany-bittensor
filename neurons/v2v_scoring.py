@@ -103,36 +103,61 @@ def cleanup_gpu_memory():
     torch.cuda.ipc_collect()
 
 
-def load_ckpt_from_hf(model_id: str, hf_repo_id: str, local_dir: str, device: str='cuda',  target_file: str = "hotkey.txt"):
-    repo_dir = Path(local_dir) / hf_repo_id
-    bt.logging.info(f"Loading ckpt {hf_repo_id}, repo_dir: {repo_dir}")
-    hf_api = huggingface_hub.HfApi()
+# def load_ckpt_from_hf(model_id: str, hf_repo_id: str, local_dir: str, device: str='cuda',  target_file: str = "hotkey.txt"):
+#     repo_dir = Path(local_dir) / hf_repo_id
+#     bt.logging.info(f"Loading ckpt {hf_repo_id}, repo_dir: {repo_dir}")
+#     hf_api = huggingface_hub.HfApi()
+#
+#     # Download and read the target file
+#     target_file_contents = None
+#     try:
+#         target_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=target_file, local_dir=repo_dir)
+#         with open(target_file_path, 'r') as file:
+#             target_file_contents = file.read().strip()
+#     except huggingface_hub.utils._errors.EntryNotFoundError:
+#         print(f"Warning: File '{target_file}' not found in the repository.")
+#     except Exception as e:
+#         print(f"An error occurred while trying to read '{target_file}': {str(e)}")
+#     return s2s_inference(model_id, hf_repo_id, repo_dir, device), target_file_contents
 
+
+def get_model_files_from_hf(hf_repo_id: str, local_dir: str) -> str:
+    repo_dir = Path(local_dir) / hf_repo_id
+    huggingface_hub.snapshot_download(hf_repo_id, local_dir=repo_dir)
+    return str(repo_dir)
+
+
+def get_hotkey_file_contents(model_dir: str, target_file: str = "hotkey.txt") -> str | None:
     # Download and read the target file
     target_file_contents = None
     try:
-        target_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=target_file, local_dir=repo_dir)
+        target_file_path = Path(model_dir) / target_file
         with open(target_file_path, 'r') as file:
             target_file_contents = file.read().strip()
-    except huggingface_hub.utils._errors.EntryNotFoundError:
-        print(f"Warning: File '{target_file}' not found in the repository.")
     except Exception as e:
         print(f"An error occurred while trying to read '{target_file}': {str(e)}")
-    return s2s_inference(model_id, hf_repo_id, repo_dir, device), target_file_contents
+
+    return target_file_contents
 
 
 def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_batch: Dataset, hotkey: str, block, model_tracker, device: str='cuda'):
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
-    inference_recipe, hotkey_file_contents = load_ckpt_from_hf(model_id, hf_repo_id, local_dir=local_dir, device=device, target_file="hotkey.txt")
+
+    repo_dir = Path(local_dir) / hf_repo_id
+    inference_recipe = s2s_inference(model_id, hf_repo_id, repo_dir, device)
+    hotkey_file_contents = get_hotkey_file_contents(repo_dir)
+
+    # inference_recipe, hotkey_file_contents = load_ckpt_from_hf(model_id, hf_repo_id, local_dir=local_dir, device=device, target_file="hotkey.txt")
+
     # Check if the contents of license file are the same as the hotkey if in repo
-    # if hotkey_file_contents is not None and hotkey_file_contents != hotkey:
-    #     bt.logging.warning(f"*** Hotkey file contents {hotkey_file_contents[:48]} do not match hotkey {hotkey}. Returning score of 0. ***")
-    #     cleanup_gpu_memory()
-    #     log_gpu_memory('after model clean-up')
-    #     return 0
-    # elif hotkey_file_contents is not None and hotkey_file_contents == hotkey:
-    #     bt.logging.info(f"Hotkey file contents match hotkey {hotkey}")
+    if hotkey_file_contents is not None and hotkey_file_contents != hotkey:
+        bt.logging.warning(f"*** Hotkey file contents {hotkey_file_contents[:48]} do not match hotkey {hotkey}. Returning score of 0. ***")
+        cleanup_gpu_memory()
+        log_gpu_memory('after model clean-up')
+        return 0
+    elif hotkey_file_contents is not None and hotkey_file_contents == hotkey:
+        bt.logging.info(f"Hotkey file contents match hotkey {hotkey}")
     
     # Check if the model is unique. Calculates the model's checkpoint (.pt) file hash for storage.
     if model_tracker is not None:
@@ -227,8 +252,9 @@ if __name__ == "__main__":
             bt.logging.info(f"Time taken for diarization dataset: {time.time() - diar_time:.2f} seconds")
             # local_dir = temp_dir_cache.get_temp_dir(hf_repo_id)
             local_dir = './model_cache' #temp_dir_cache.get_temp_dir(hf_repo_id)
+            get_model_files_from_hf(hf_repo_id, local_dir)
 
-            hotkey = None
+            hotkey = '5FeqmebkCWfepQPgSkrEHRwtpUmHGASF4BNERZDs9pvKFtcD'
             block = 1
             model_tracker = None
             vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker)
