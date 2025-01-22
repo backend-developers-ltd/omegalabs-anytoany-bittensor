@@ -13,7 +13,7 @@ from evaluation.S2S.rawnet.models.RawNetBasicBlock import Bottle2neck
 from huggingface_hub import hf_hub_download
 
 class RawNet3Inference:
-    def __init__(self, model_name = 'jungjee/RawNet3', repo_dir = "models", device="cuda"):
+    def __init__(self, model_name='jungjee/RawNet3', device="cuda", model_file_path: str | None = None):
         self.model = RawNet3(
             Bottle2neck,
             model_scale=8,
@@ -29,10 +29,10 @@ class RawNet3Inference:
         )
         self.device = torch.device(device)
 
-        
-        model_path = repo_dir
-        temp_location = hf_hub_download(repo_id=model_name, repo_type='model', filename='model.pt', local_dir=model_path)
-        self.model.load_state_dict(torch.load(temp_location, weights_only=True)['model'])
+        if model_file_path is None:
+            model_path = 'models'
+            model_file_path = hf_hub_download(repo_id=model_name, repo_type='model', filename='model.pt', local_dir=model_path)
+        self.model.load_state_dict(torch.load(model_file_path, weights_only=True)['model'])
         self.model.eval()
 
    
