@@ -13,8 +13,11 @@ from models.S2S.moshi.moshi.models.loaders import get_mimi
 from models.S2S.moshi.inference import load_audio_from_array, encode_audio
 from huggingface_hub import hf_hub_download
 
+WHISPER_HF_REPO_ID = "openai/whisper-large-v2"
+
+
 class S2SMetrics:
-    def __init__(self, cache_dir: str, device: str='cuda'):
+    def __init__(self, cache_dir: str, device: str='cuda', whisper_model_dir_path: str | None = None):
         
         # Load the Whisper large model and processor
         self.device = torch.device(device)
@@ -25,9 +28,12 @@ class S2SMetrics:
         self.mimi_model = get_mimi(mimi_weight_path, device=self.device)
         self.mimi_model.set_num_codebooks(4)  # up to 32 for mimi, but limited to 8 for moshi
 
+        pretrained_model_name_or_path = (whisper_model_dir_path
+        if whisper_model_dir_path is not None
+            else WHISPER_HF_REPO_ID)
 
-        self.processor = WhisperProcessor.from_pretrained("openai/whisper-large-v2", cache_dir=cache_dir)
-        self.model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v2", cache_dir=cache_dir).to(self.device)
+        self.processor = WhisperProcessor.from_pretrained(pretrained_model_name_or_path, cache_dir=cache_dir)
+        self.model = WhisperForConditionalGeneration.from_pretrained(pretrained_model_name_or_path, cache_dir=cache_dir).to(self.device)
         
         self.nb_pesq = PerceptualEvaluationSpeechQuality(16000, 'nb')
         self.wb_pesq = PerceptualEvaluationSpeechQuality(16000, 'wb')

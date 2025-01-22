@@ -127,7 +127,7 @@ def get_hotkey_file_contents(model_dir: str, target_file: str = "hotkey.txt") ->
     return target_file_contents
 
 
-def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_batch: Dataset, hotkey: str, block, model_tracker, device: str='cuda'):
+def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_batch: Dataset, hotkey: str, block, model_tracker, device: str='cuda', whisper_model_dir_path: str | None = None) -> float:
     cleanup_gpu_memory()
     log_gpu_memory('before model load')
 
@@ -165,7 +165,7 @@ def compute_s2s_metrics(model_id: str, hf_repo_id: str, local_dir: str, mini_bat
         
     log_gpu_memory('after model load')
     cache_dir = "./model_cache"
-    s2s_metrics = S2SMetrics(cache_dir=cache_dir)
+    s2s_metrics = S2SMetrics(cache_dir=cache_dir, whisper_model_dir_path=whisper_model_dir_path)
     metrics = {'mimi_score': [],
                 'wer_score': [],
                 'length_penalty': [],
