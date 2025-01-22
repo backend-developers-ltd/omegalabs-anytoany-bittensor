@@ -143,13 +143,19 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                 executor_class=EXECUTOR_CLASS,
                 hf_volumes=[
                     HuggingfaceVolume(
-                        repo_id='openai/whisper'
+                        repo_id='openai/whisper-large-v2',
+                        revision=None,
+                        relative_path='openai/whisper-large-v2',
                     ),
                     HuggingfaceVolume(
-
+                        repo_id='jungjee/RawNet3',
+                        revision=None,
+                        relative_path='jungjee/RawNet3',
                     ),
                     HuggingfaceVolume(
-
+                        repo_id='tezuesh/mimi',
+                        revision=None,
+                        relative_path='tezuesh/mimi',
                     ),
                 ]
             )
