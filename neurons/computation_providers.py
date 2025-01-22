@@ -94,8 +94,6 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
         self.trusted_miner = trusted_miner
 
     async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
-        assert competition_id == 'o1'
-
         if competition_id == 'o1':
             data_sample = pull_latest_omega_dataset(shuffle_seed=0)
             if data_sample is None:
