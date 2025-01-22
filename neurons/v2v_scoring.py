@@ -103,24 +103,6 @@ def cleanup_gpu_memory():
     torch.cuda.ipc_collect()
 
 
-# def load_ckpt_from_hf(model_id: str, hf_repo_id: str, local_dir: str, device: str='cuda',  target_file: str = "hotkey.txt"):
-#     repo_dir = Path(local_dir) / hf_repo_id
-#     bt.logging.info(f"Loading ckpt {hf_repo_id}, repo_dir: {repo_dir}")
-#     hf_api = huggingface_hub.HfApi()
-#
-#     # Download and read the target file
-#     target_file_contents = None
-#     try:
-#         target_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=target_file, local_dir=repo_dir)
-#         with open(target_file_path, 'r') as file:
-#             target_file_contents = file.read().strip()
-#     except huggingface_hub.utils._errors.EntryNotFoundError:
-#         print(f"Warning: File '{target_file}' not found in the repository.")
-#     except Exception as e:
-#         print(f"An error occurred while trying to read '{target_file}': {str(e)}")
-#     return s2s_inference(model_id, hf_repo_id, repo_dir, device), target_file_contents
-
-
 def get_model_files_from_hf(hf_repo_id: str, local_dir: str) -> str:
     repo_dir = Path(local_dir) / hf_repo_id
     huggingface_hub.snapshot_download(hf_repo_id, local_dir=repo_dir)
