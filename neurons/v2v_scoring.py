@@ -110,12 +110,17 @@ def get_model_files_from_hf(hf_repo_id: str, local_dir: str) -> str:
 
 
 def get_hotkey_file_contents(model_dir: str, target_file: str = "hotkey.txt") -> str | None:
-    # Download and read the target file
+    # Download if not exists and read the target file
+    hf_api = huggingface_hub.HfApi()
     target_file_contents = None
     try:
         target_file_path = Path(model_dir) / target_file
+        if not target_file_path.exists():
+            target_file_path = hf_api.hf_hub_download(repo_id=hf_repo_id, filename=target_file, local_dir=model_dir)
         with open(target_file_path, 'r') as file:
             target_file_contents = file.read().strip()
+    except huggingface_hub.utils._errors.EntryNotFoundError:
+        print(f"Warning: File '{target_file}' not found in the repository.")
     except Exception as e:
         print(f"An error occurred while trying to read '{target_file}': {str(e)}")
 
