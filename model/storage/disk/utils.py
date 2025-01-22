@@ -27,7 +27,7 @@ def get_local_model_snapshot_dir(base_dir: str, hotkey: str, model_id: ModelId) 
     return os.path.join(
         get_local_model_dir(base_dir, hotkey, model_id),
         "snapshots",
-        model_id.commit,
+        model_id.commit or 'None',
     )
 
 
