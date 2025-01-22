@@ -233,6 +233,7 @@ if __name__ == "__main__":
             model_tracker = None
             vals = compute_s2s_metrics(model_id="moshi", hf_repo_id=hf_repo_id, mini_batch=mini_batch, local_dir=local_dir, hotkey=hotkey, block=block, model_tracker=model_tracker)
             end_time = time.time()
+            print(f"Time taken: {end_time - start_time:.2f} seconds, score: {vals}")
             bt.logging.info(f"I am here {hf_repo_id} Time taken: {end_time - start_time:.2f} seconds")
             bt.logging.info(f"Combined score: {vals}")
             exit(0)
