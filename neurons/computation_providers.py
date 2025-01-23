@@ -8,7 +8,7 @@ from compute_horde.base.volume import HuggingfaceVolume
 from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
 from datasets import Dataset
 
-from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH
+from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH, COMPUTE_HORDE_JOB_STDOUT_MARKER
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
 from neurons.job_generator import ValidationJobGenerator
@@ -190,6 +190,15 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
         )
         bt.logging.info(f"Job completed with stdout: {stdout}, stderr: {stderr}")
 
-        output = await job_generator.download_output()
+        output = self.get_output(stdout)
 
         return output["score"]
+
+    def get_output(self, stdout: str) -> dict:
+        for line in stdout.splitlines():
+            if line.startswith(COMPUTE_HORDE_JOB_STDOUT_MARKER):
+                json_data = line[len(f"{COMPUTE_HORDE_JOB_STDOUT_MARKER}="):]
+                output = json.loads(json_data)
+                return output
+
+        raise RuntimeError(f"{COMPUTE_HORDE_JOB_STDOUT_MARKER} not found in job stdout.")

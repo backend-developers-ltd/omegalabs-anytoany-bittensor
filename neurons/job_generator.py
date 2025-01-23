@@ -1,13 +1,6 @@
-from compute_horde.base.volume import Volume, HuggingfaceVolume
-import json
-from compute_horde.base.output_upload import (
-    MultiUpload,
-    OutputUpload,
-    SingleFilePutUpload,
-)
-from compute_horde.base.volume import SingleFileVolume, MultiVolume
-
 import uuid
+
+from compute_horde.base.volume import Volume, HuggingfaceVolume, SingleFileVolume, MultiVolume
 from compute_horde.executor_class import ExecutorClass, DEFAULT_EXECUTOR_CLASS
 from compute_horde.miner_client.organic import OrganicJobDetails
 
@@ -16,10 +9,8 @@ from constants import (
     VOLUME_DIR,
     MODELS_RELATIVE_PATH,
     DATASET_FILENAME,
-    OUTPUT_FILENAME,
 )
 from model.storage.disk.utils import get_local_model_snapshot_dir
-from neurons.s3 import generate_upload_url, download_file_content, get_public_url
 
 
 class ValidationJobGenerator:
@@ -99,16 +90,6 @@ class ValidationJobGenerator:
             ]
         )
 
-    def output_upload(self) -> OutputUpload | None:
-        return MultiUpload(
-            uploads=[
-                SingleFilePutUpload(
-                    url=generate_upload_url(self.s3_output_filename),
-                    relative_path=OUTPUT_FILENAME,
-                )
-            ]
-        )
-
     def get_job_details(self) -> OrganicJobDetails:
         job_uuid = uuid.uuid4()
         return OrganicJobDetails(
@@ -120,11 +101,4 @@ class ValidationJobGenerator:
             docker_run_cmd=self.docker_run_cmd(),
             total_job_timeout=self.total_timeout_seconds(),
             volume=self.volume(),
-            output=self.output_upload(),
         )
-
-    async def download_output(self):
-        response = await download_file_content(
-            get_public_url(key=self.s3_output_filename)
-        )
-        return json.loads(response)

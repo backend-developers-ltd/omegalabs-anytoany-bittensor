@@ -12,7 +12,7 @@ from constants import (
     CHECKPOINTS_RELATIVE_PATH,
     DATASET_FILENAME,
     OUTPUT_DIR,
-    OUTPUT_FILENAME,
+    OUTPUT_FILENAME, COMPUTE_HORDE_JOB_STDOUT_MARKER,
 )
 from model.data import ModelId, ModelMetadata
 from model.storage.disk.utils import get_local_model_snapshot_dir
@@ -119,5 +119,4 @@ if __name__ == "__main__":
     )
     result = {"score": score, "total_s": total_s}
 
-    with open(OUTPUT_DIR / OUTPUT_FILENAME, "w+") as f:
-        json.dump(result, f)
+    print(f"{COMPUTE_HORDE_JOB_STDOUT_MARKER}={json.dumps(result)}")
