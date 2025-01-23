@@ -6,9 +6,6 @@ import time
 from typing import Optional
 from datasets import Dataset
 import ulid
-import pandas as pd
-import tempfile
-from tqdm import tqdm
 import numpy as np
 import random
 import subprocess
@@ -17,6 +14,9 @@ import bittensor as bt
 
 import sys
 from pathlib import Path
+
+from neurons.datasets import shuffle_omega_dataset, get_recent_omega_dataset_files
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 from models.S2S import inference as s2s_inference
@@ -32,56 +32,58 @@ def get_timestamp_from_filename(filename: str):
     return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
 
 
-def pull_latest_diarization_dataset() -> Optional[dict]:
-    omega_ds_files = huggingface_hub.repo_info(repo_id=HF_DATASET, repo_type="dataset").siblings
-    recent_files = [
-        f.rfilename
-        for f in omega_ds_files if
-        f.rfilename.startswith(DATA_FILES_PREFIX) and
-        time.time() - get_timestamp_from_filename(f.rfilename) < MIN_AGE
-    ][:MAX_FILES]
+def process_diarization_dataset(dataset: Dataset, shuffle_seed: int | None = None) -> dict | None:
+    dataset.cast_column("audio", Audio(sampling_rate=16000))
+    omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
 
-    download_config = DownloadConfig(download_desc="Downloading Omega Voice Dataset")
+    # Initialize dictionary to store processed samples
+    overall_dataset = {k: [] for k in omega_dataset.keys()}
 
+    # Process each audio sample
+    for i in range(len(omega_dataset['audio'])):
+        # Extract raw audio array
+        audio_array = omega_dataset['audio'][i]
+
+        # Get speaker timestamps and IDs
+        diar_timestamps_start = np.array(omega_dataset['diar_timestamps_start'][i])
+        diar_speakers = np.array(omega_dataset['diar_speakers'][i])
+
+        # Skip samples with only 1 speaker
+        if len(set(diar_speakers)) == 1:
+            continue
+
+        # Add all fields for this sample
+        for k in omega_dataset.keys():
+            value = audio_array if k == 'audio' else omega_dataset[k][i]
+            overall_dataset[k].append(value)
+
+        # Stop after collecting 16 valid samples
+        if len(overall_dataset['audio']) >= 8:
+            break
+
+    # Check if we found enough valid samples
+    if len(overall_dataset['audio']) < 1:
+        return None
+
+    return overall_dataset
+
+
+def pull_latest_diarization_dataset(shuffle_seed: int | None = None) -> Optional[dict]:
+    recent_files = get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
     if len(recent_files) == 0:
         return None
 
+    download_config = DownloadConfig(download_desc="Downloading Omega Voice Dataset")
     with TemporaryDirectory(dir='./data_cache') as temp_dir:
         # Load the dataset from HuggingFace using the recent files
-        omega_dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)["train"]
-        omega_dataset.cast_column("audio", Audio(sampling_rate=16000))
-        omega_dataset = next(omega_dataset.shuffle().iter(batch_size=64))
+        dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)["train"]
+        return process_diarization_dataset(dataset, shuffle_seed)
 
-        # Initialize dictionary to store processed samples
-        overall_dataset = {k: [] for k in omega_dataset.keys()}
 
-        # Process each audio sample
-        for i in range(len(omega_dataset['audio'])):
-            # Extract raw audio array
-            audio_array = omega_dataset['audio'][i]
 
-            # Get speaker timestamps and IDs
-            diar_timestamps_start = np.array(omega_dataset['diar_timestamps_start'][i])
-            diar_speakers = np.array(omega_dataset['diar_speakers'][i])
-
-            # Skip samples with only 1 speaker
-            if len(set(diar_speakers)) == 1:
-                continue
-
-            # Add all fields for this sample
-            for k in omega_dataset.keys():
-                value = audio_array if k == 'audio' else omega_dataset[k][i]
-                overall_dataset[k].append(value)
-
-            # Stop after collecting 16 valid samples
-            if len(overall_dataset['audio']) >= 8:
-                break
-
-        # Check if we found enough valid samples
-        if len(overall_dataset['audio']) < 1:
-            return None
-
-        return overall_dataset
+def get_diarization_dataset_from_disk(dir_path: str, shuffle_seed: int | None) -> dict | None:
+    dataset = load_dataset(dir_path)['train']
+    return process_diarization_dataset(dataset, shuffle_seed)
 
 
 def get_gpu_memory():

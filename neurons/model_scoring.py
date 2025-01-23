@@ -1,21 +1,20 @@
 import os
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-import time
 from typing import Optional
 from pathlib import Path
 import subprocess
 
 import torch
-import ulid
 from omegaconf import OmegaConf, DictConfig
 import huggingface_hub
-from datasets import load_dataset, Dataset, DownloadConfig
+from datasets import load_dataset, DownloadConfig
 
 import bittensor as bt
 
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
+from neurons.datasets import get_recent_omega_dataset_files, shuffle_omega_dataset
 from tune_recipes.gen import InferenceRecipe
 
 HF_DATASET = "omegalabsinc/omega-multimodal"
@@ -33,27 +32,21 @@ class ModelFiles:
     hotkey_path: str | None = None
 
 
-
-def get_timestamp_from_filename(filename: str):
-    return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
-
-
 def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[dict]:
-    omega_ds_files = huggingface_hub.repo_info(repo_id=HF_DATASET, repo_type="dataset").siblings
-    recent_files = [
-        f.rfilename
-        for f in omega_ds_files if
-        f.rfilename.startswith(DATA_FILES_PREFIX) and 
-        time.time() - get_timestamp_from_filename(f.rfilename) < MIN_AGE
-    ][:MAX_FILES]
-    
+    recent_files = get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
     if len(recent_files) == 0:
         return None
     download_config = DownloadConfig(download_desc="Downloading Omega Multimodal Dataset")
 
     with TemporaryDirectory(dir='./data_cache') as temp_dir:
-        omega_dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)["train"]
-        omega_dataset = next(omega_dataset.shuffle(seed=shuffle_seed).iter(batch_size=64))
+        dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)['train']
+        omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
+    return omega_dataset
+
+
+def get_omega_dataset_from_disk(dir_path: str, shuffle_seed: int | None = None) -> dict | None:
+    dataset = load_dataset(dir_path)['train']
+    omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
     return omega_dataset
 
 
