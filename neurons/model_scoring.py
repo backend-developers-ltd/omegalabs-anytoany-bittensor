@@ -32,7 +32,7 @@ class ModelFiles:
     hotkey_path: str | None = None
 
 
-def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[dict]:
+def pull_latest_omega_dataset() -> Optional[dict]:
     recent_files = get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
     if len(recent_files) == 0:
         return None
@@ -40,13 +40,13 @@ def pull_latest_omega_dataset(shuffle_seed: int | None = None) -> Optional[dict]
 
     with TemporaryDirectory(dir='./data_cache') as temp_dir:
         dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)['train']
-        omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
+        omega_dataset = shuffle_omega_dataset(dataset)
     return omega_dataset
 
 
-def get_omega_dataset_from_disk(dir_path: str, shuffle_seed: int | None = None) -> dict | None:
+def get_omega_dataset_from_disk(dir_path: str) -> dict | None:
     dataset = load_dataset(dir_path)['train']
-    omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
+    omega_dataset = shuffle_omega_dataset(dataset)
     return omega_dataset
 
 

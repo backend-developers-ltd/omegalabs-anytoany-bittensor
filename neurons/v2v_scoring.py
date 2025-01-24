@@ -32,9 +32,9 @@ def get_timestamp_from_filename(filename: str):
     return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
 
 
-def process_diarization_dataset(dataset: Dataset, shuffle_seed: int | None = None) -> dict | None:
+def process_diarization_dataset(dataset: Dataset) -> dict | None:
     dataset.cast_column("audio", Audio(sampling_rate=16000))
-    omega_dataset = shuffle_omega_dataset(dataset, shuffle_seed)
+    omega_dataset = shuffle_omega_dataset(dataset)
 
     # Initialize dictionary to store processed samples
     overall_dataset = {k: [] for k in omega_dataset.keys()}
@@ -68,7 +68,7 @@ def process_diarization_dataset(dataset: Dataset, shuffle_seed: int | None = Non
     return overall_dataset
 
 
-def pull_latest_diarization_dataset(shuffle_seed: int | None = None) -> Optional[dict]:
+def pull_latest_diarization_dataset() -> Optional[dict]:
     recent_files = get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
     if len(recent_files) == 0:
         return None
@@ -77,13 +77,12 @@ def pull_latest_diarization_dataset(shuffle_seed: int | None = None) -> Optional
     with TemporaryDirectory(dir='./data_cache') as temp_dir:
         # Load the dataset from HuggingFace using the recent files
         dataset = load_dataset(HF_DATASET, data_files=recent_files, cache_dir=temp_dir, download_config=download_config)["train"]
-        return process_diarization_dataset(dataset, shuffle_seed)
+        return process_diarization_dataset(dataset)
 
 
-
-def get_diarization_dataset_from_disk(dir_path: str, shuffle_seed: int | None) -> dict | None:
+def get_diarization_dataset_from_disk(dir_path) -> dict | None:
     dataset = load_dataset(dir_path)['train']
-    return process_diarization_dataset(dataset, shuffle_seed)
+    return process_diarization_dataset(dataset)
 
 
 def get_gpu_memory():
