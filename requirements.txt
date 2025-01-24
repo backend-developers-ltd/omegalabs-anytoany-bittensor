@@ -36,6 +36,5 @@ huggingface_hub[hf_transfer]
 librosa==0.10.2.post1
 asteroid-filterbanks==0.4.0
 torchmetrics==1.6.0
+# TODO: Remove compute-horde
 compute-horde>=0.0.18
-httpx
-boto3
