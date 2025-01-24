@@ -15,7 +15,7 @@ import bittensor as bt
 import sys
 from pathlib import Path
 
-from neurons.datasets import shuffle_omega_dataset, get_recent_omega_dataset_files
+from neurons.datasets import shuffle_omega_dataset, get_recent_omega_dataset_files, get_huggingface_file_url
 
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -28,8 +28,16 @@ MIN_AGE = 8 * 60 * 60  # 8 hours
 MAX_FILES = 8
 
 
-def get_timestamp_from_filename(filename: str):
-    return ulid.from_str(os.path.splitext(filename.split("/")[-1])[0]).timestamp().timestamp
+def get_recent_omega_voice_dataset_files() -> list[str]:
+    return get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
+
+
+def get_recent_omega_voice_dataset_urls() -> list[str]:
+    recent_files = get_recent_omega_voice_dataset_files()
+    return [
+        get_huggingface_file_url(HF_DATASET, 'main', filename)
+        for filename in recent_files
+    ]
 
 
 def process_diarization_dataset(dataset: Dataset) -> dict | None:
@@ -69,7 +77,7 @@ def process_diarization_dataset(dataset: Dataset) -> dict | None:
 
 
 def pull_latest_diarization_dataset() -> Optional[dict]:
-    recent_files = get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
+    recent_files = get_recent_omega_voice_dataset_files()
     if len(recent_files) == 0:
         return None
 

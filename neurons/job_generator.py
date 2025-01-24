@@ -19,17 +19,17 @@ class ValidationJobGenerator:
         competition_id: str,
         hotkey: str,
         model_metadata: ModelMetadata,
-        data_sample_url: str,
         docker_image_name: str,
         hf_volumes: list[HuggingfaceVolume],
+        data_volumes: list[SingleFileVolume],
         executor_class: str | None = None,
     ) -> None:
         self.competition_id = competition_id
         self.hotkey = hotkey
         self.model_metadata = model_metadata
-        self.data_sample_url = data_sample_url
         self._docker_image_name = docker_image_name
         self.hf_volumes = hf_volumes
+        self.data_volumes = data_volumes
         self._executor_class = (
             ExecutorClass(executor_class) if executor_class else DEFAULT_EXECUTOR_CLASS
         )
@@ -83,10 +83,7 @@ class ValidationJobGenerator:
                     ),
                 ),
                 *self.hf_volumes,
-                SingleFileVolume(
-                    url=self.data_sample_url,
-                    relative_path=DATASET_FILENAME,
-                ),
+                *self.data_volumes,
             ]
         )
 

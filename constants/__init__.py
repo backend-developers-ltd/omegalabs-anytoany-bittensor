@@ -75,6 +75,7 @@ OUTPUT_DIR = Path('/output')
 
 MODELS_RELATIVE_PATH = '.'
 CHECKPOINTS_RELATIVE_PATH = 'checkpoints'
+DATA_RELATIVE_PATH = 'data'
 
 OUTPUT_FILENAME = 'output.json'
 DATASET_FILENAME = 'dataset.json'

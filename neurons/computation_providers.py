@@ -1,20 +1,21 @@
 import json
+import os
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 
 import numpy as np
 import bittensor as bt
-from compute_horde.base.volume import HuggingfaceVolume
+from compute_horde.base.volume import HuggingfaceVolume, SingleFileVolume
 from compute_horde.miner_client.organic import OrganicMinerClient, run_organic_job
 from datasets import Dataset
 
-from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH, COMPUTE_HORDE_JOB_STDOUT_MARKER
+from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE_PATH, COMPUTE_HORDE_JOB_STDOUT_MARKER, \
+    DATA_RELATIVE_PATH
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
 from neurons.job_generator import ValidationJobGenerator
-from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf
-from neurons.s3 import upload_data_to_s3
-from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics
+from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf, get_recent_omega_multimodal_dataset_urls
+from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics, get_recent_omega_voice_dataset_urls
 from utilities.temp_dir_cache import TempDirCache
 
 
@@ -104,19 +105,14 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
 
     async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         if competition_id == 'o1':
-            data_sample = pull_latest_omega_dataset(shuffle_seed=0)
-            if data_sample is None:
-                raise RuntimeError("Could not load data sample.")
-
-            bt.logging.info("Uploading data sample to S3.")
-
-            data_sample_url = upload_data_to_s3(json.dumps(data_sample))
+            dataset_urls = get_recent_omega_multimodal_dataset_urls()
+            if not dataset_urls:
+                raise DatasetNotAvailable()
 
             job_generator = ValidationJobGenerator(
                 competition_id=competition_id,
                 hotkey=hotkey,
                 model_metadata=model_metadata,
-                data_sample_url=data_sample_url,
                 docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
                 executor_class=EXECUTOR_CLASS,
                 hf_volumes=[
@@ -126,23 +122,25 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                         relative_path=CHECKPOINTS_RELATIVE_PATH,
                     ),
                 ],
+                data_volumes=[
+                    SingleFileVolume(
+                        url=url,
+                        relative_path=os.path.join(DATA_RELATIVE_PATH, url.split('/')[-1])
+                    )
+                    for url in dataset_urls
+                ],
             )
 
             score = await self.run_validation_job(job_generator)
         elif competition_id == 'v1':
-            data_sample = pull_latest_diarization_dataset()
-            if data_sample is None:
-                raise RuntimeError("Could not load data sample.")
-
-            bt.logging.info("Uploading data sample to S3.")
-
-            data_sample_url = upload_data_to_s3(json.dumps(data_sample, cls=NumpyEncoder))
+            dataset_urls = get_recent_omega_voice_dataset_urls()
+            if not dataset_urls:
+                raise DatasetNotAvailable()
 
             job_generator = ValidationJobGenerator(
                 competition_id=competition_id,
                 hotkey=hotkey,
                 model_metadata=model_metadata,
-                data_sample_url=data_sample_url,
                 docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
                 executor_class=EXECUTOR_CLASS,
                 hf_volumes=[
@@ -161,6 +159,13 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                         revision=None,
                         relative_path='tezuesh/mimi',
                     ),
+                ],
+                data_volumes=[
+                    SingleFileVolume(
+                        url=url,
+                        relative_path=os.path.join(DATA_RELATIVE_PATH, url.split('/')[-1])
+                    )
+                    for url in dataset_urls
                 ],
             )
 

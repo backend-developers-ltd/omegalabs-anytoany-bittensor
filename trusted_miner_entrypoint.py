@@ -7,17 +7,15 @@ from datasets import Dataset
 
 from constants import (
     VIDEOBIND_FILENAME,
-    ORIGINAL_COMPETITION_ID,
     VOLUME_DIR,
     CHECKPOINTS_RELATIVE_PATH,
-    DATASET_FILENAME,
-    OUTPUT_DIR,
-    OUTPUT_FILENAME, COMPUTE_HORDE_JOB_STDOUT_MARKER,
+    COMPUTE_HORDE_JOB_STDOUT_MARKER,
+    DATA_RELATIVE_PATH,
 )
 from model.data import ModelId, ModelMetadata
 from model.storage.disk.utils import get_local_model_snapshot_dir
-from neurons.model_scoring import get_model_score, get_model_files_from_disk
-from neurons.v2v_scoring import compute_s2s_metrics
+from neurons.model_scoring import get_model_score, get_model_files_from_disk, get_omega_dataset_from_disk
+from neurons.v2v_scoring import compute_s2s_metrics, get_diarization_dataset_from_disk
 
 
 def parse_arguments():
@@ -59,15 +57,14 @@ def score_model(
     st = time.time()
     logging.info("Loading data sample")
 
-    with open(VOLUME_DIR / DATASET_FILENAME) as f:
-        dataset_raw = f.read()
-
-    data_sample = json.loads(dataset_raw)
+    data_path = str(VOLUME_DIR / DATA_RELATIVE_PATH)
 
     model_dir = get_local_model_snapshot_dir(models_dir, hotkey, model_metadata.id)
 
     if competition_id == 'o1':
         model_files = get_model_files_from_disk(model_dir)
+
+        data_sample = get_omega_dataset_from_disk(data_path)
 
         videobind_path = VOLUME_DIR / CHECKPOINTS_RELATIVE_PATH / VIDEOBIND_FILENAME
 
@@ -83,6 +80,8 @@ def score_model(
         )
     elif competition_id == 'v1':
         logging.info("Scoring model")
+
+        data_sample = get_diarization_dataset_from_disk(data_path)
 
         score = compute_s2s_metrics(
             model_id='moshi',  # update this to the model id as we support more models.
