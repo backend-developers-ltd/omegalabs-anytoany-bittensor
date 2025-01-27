@@ -77,9 +77,6 @@ MODELS_RELATIVE_PATH = '.'
 CHECKPOINTS_RELATIVE_PATH = 'checkpoints'
 DATA_RELATIVE_PATH = 'data'
 
-OUTPUT_FILENAME = 'output.json'
-DATASET_FILENAME = 'dataset.json'
-
 TRUSTED_MINER_ADDRESS = os.getenv("TRUSTED_MINER_ADDRESS")
 miner_port_str = os.getenv("TRUSTED_MINER_PORT")
 TRUSTED_MINER_PORT = int(miner_port_str) if miner_port_str else None

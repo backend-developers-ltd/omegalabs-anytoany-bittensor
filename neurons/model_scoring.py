@@ -36,14 +36,6 @@ def get_recent_omega_multimodal_dataset_files() -> list[str]:
     return get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
 
 
-def get_recent_omega_multimodal_dataset_urls() -> list[str]:
-    recent_files = get_recent_omega_multimodal_dataset_files()
-    return [
-        get_huggingface_file_url(HF_DATASET, 'main', filename)
-        for filename in recent_files
-    ]
-
-
 def pull_latest_omega_dataset() -> Optional[dict]:
     recent_files = get_recent_omega_multimodal_dataset_files()
     if len(recent_files) == 0:

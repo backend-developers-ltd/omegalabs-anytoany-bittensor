@@ -1,11 +1,9 @@
-import os
 from datasets import load_dataset, Audio, DownloadConfig
 import huggingface_hub
 from tempfile import TemporaryDirectory
 import time
 from typing import Optional
 from datasets import Dataset
-import ulid
 import numpy as np
 import random
 import subprocess
@@ -30,14 +28,6 @@ MAX_FILES = 8
 
 def get_recent_omega_voice_dataset_files() -> list[str]:
     return get_recent_omega_dataset_files(HF_DATASET, DATA_FILES_PREFIX, MIN_AGE, MAX_FILES)
-
-
-def get_recent_omega_voice_dataset_urls() -> list[str]:
-    recent_files = get_recent_omega_voice_dataset_files()
-    return [
-        get_huggingface_file_url(HF_DATASET, 'main', filename)
-        for filename in recent_files
-    ]
 
 
 def process_diarization_dataset(dataset: Dataset) -> dict | None:

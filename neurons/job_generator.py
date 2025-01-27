@@ -1,14 +1,13 @@
 import uuid
 
-from compute_horde.base.volume import Volume, HuggingfaceVolume, SingleFileVolume, MultiVolume
+from compute_horde.base.volume import Volume, HuggingfaceVolume, MultiVolume
 from compute_horde.executor_class import ExecutorClass, DEFAULT_EXECUTOR_CLASS
 from compute_horde.miner_client.organic import OrganicJobDetails
 
 from model.data import ModelMetadata
 from constants import (
     VOLUME_DIR,
-    MODELS_RELATIVE_PATH,
-    DATASET_FILENAME,
+    MODELS_RELATIVE_PATH
 )
 from model.storage.disk.utils import get_local_model_snapshot_dir
 
@@ -21,7 +20,6 @@ class ValidationJobGenerator:
         model_metadata: ModelMetadata,
         docker_image_name: str,
         hf_volumes: list[HuggingfaceVolume],
-        data_volumes: list[SingleFileVolume],
         executor_class: str | None = None,
     ) -> None:
         self.competition_id = competition_id
@@ -29,7 +27,6 @@ class ValidationJobGenerator:
         self.model_metadata = model_metadata
         self._docker_image_name = docker_image_name
         self.hf_volumes = hf_volumes
-        self.data_volumes = data_volumes
         self._executor_class = (
             ExecutorClass(executor_class) if executor_class else DEFAULT_EXECUTOR_CLASS
         )
@@ -83,7 +80,6 @@ class ValidationJobGenerator:
                     ),
                 ),
                 *self.hf_volumes,
-                *self.data_volumes,
             ]
         )
 

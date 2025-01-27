@@ -14,8 +14,9 @@ from constants import EXECUTOR_CLASS, VIDEOBIND_HF_REPO_ID, CHECKPOINTS_RELATIVE
 from model.data import ModelMetadata
 from model.model_tracker import ModelTracker
 from neurons.job_generator import ValidationJobGenerator
-from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf, get_recent_omega_multimodal_dataset_urls
-from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics, get_recent_omega_voice_dataset_urls
+from neurons.model_scoring import pull_latest_omega_dataset, get_model_score, get_model_files_from_hf, get_recent_omega_multimodal_dataset_files, HF_DATASET as HF_MULTIMODAL_REPO_ID
+from neurons.v2v_scoring import pull_latest_diarization_dataset, compute_s2s_metrics, \
+    HF_DATASET as HF_DIARIZATION_REPO_ID, get_recent_omega_voice_dataset_files
 from utilities.temp_dir_cache import TempDirCache
 
 
@@ -105,8 +106,8 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
 
     async def score_model(self, competition_id: str, hotkey: str, model_metadata: ModelMetadata) -> float:
         if competition_id == 'o1':
-            dataset_urls = get_recent_omega_multimodal_dataset_urls()
-            if not dataset_urls:
+            dataset_files = get_recent_omega_multimodal_dataset_files()
+            if not dataset_files:
                 raise DatasetNotAvailable()
 
             job_generator = ValidationJobGenerator(
@@ -117,24 +118,22 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                 executor_class=EXECUTOR_CLASS,
                 hf_volumes=[
                     HuggingfaceVolume(
+                        repo_id=HF_MULTIMODAL_REPO_ID,
+                        relative_path=DATA_RELATIVE_PATH,
+                        repo_type="dataset",
+                        allow_patterns=dataset_files,
+                    ),
+                    HuggingfaceVolume(
                         repo_id=VIDEOBIND_HF_REPO_ID,
-                        revision=None,
                         relative_path=CHECKPOINTS_RELATIVE_PATH,
                     ),
-                ],
-                data_volumes=[
-                    SingleFileVolume(
-                        url=url,
-                        relative_path=os.path.join(DATA_RELATIVE_PATH, url.split('/')[-1])
-                    )
-                    for url in dataset_urls
                 ],
             )
 
             score = await self.run_validation_job(job_generator)
         elif competition_id == 'v1':
-            dataset_urls = get_recent_omega_voice_dataset_urls()
-            if not dataset_urls:
+            dataset_files = get_recent_omega_voice_dataset_files()
+            if not dataset_files:
                 raise DatasetNotAvailable()
 
             job_generator = ValidationJobGenerator(
@@ -144,6 +143,12 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                 docker_image_name='backenddevelopersltd/slawek-test:v0-latest',
                 executor_class=EXECUTOR_CLASS,
                 hf_volumes=[
+                    HuggingfaceVolume(
+                        repo_id=HF_DIARIZATION_REPO_ID,
+                        relative_path=DATA_RELATIVE_PATH,
+                        repo_type="dataset",
+                        allow_patterns=dataset_files,
+                    ),
                     HuggingfaceVolume(
                         repo_id='openai/whisper-large-v2',
                         revision=None,
@@ -159,13 +164,6 @@ class ComputeHordeComputationProvider(AbstractComputationProvider):
                         revision=None,
                         relative_path='tezuesh/mimi',
                     ),
-                ],
-                data_volumes=[
-                    SingleFileVolume(
-                        url=url,
-                        relative_path=os.path.join(DATA_RELATIVE_PATH, url.split('/')[-1])
-                    )
-                    for url in dataset_urls
                 ],
             )
 
